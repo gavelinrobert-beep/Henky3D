@@ -2,6 +2,7 @@
 #include "../core/Window.h"
 #include <stdexcept>
 #include <atomic>
+#include <sstream>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -68,6 +69,11 @@ void GraphicsDevice::CreateDeviceAndQueues() {
         throw std::runtime_error("Failed to create command queue");
     }
 
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    if (FAILED(m_Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_ComputeQueue)))) {
+        throw std::runtime_error("Failed to create compute queue");
+    }
+
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
     if (FAILED(m_Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_CopyQueue)))) {
         throw std::runtime_error("Failed to create copy queue");
@@ -121,7 +127,7 @@ void GraphicsDevice::CreateDescriptorHeaps() {
     }
 
     D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-    srvHeapDesc.NumDescriptors = 1000;
+    srvHeapDesc.NumDescriptors = kSrvDescriptorCapacity;
     srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     if (FAILED(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SRVHeap)))) {
@@ -144,6 +150,7 @@ void GraphicsDevice::CreateRenderTargets() {
         m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&m_RenderTargets[i]));
         m_Device->CreateRenderTargetView(m_RenderTargets[i].Get(), &rtvDesc, rtvHandle);
         rtvHandle.ptr += m_RTVDescriptorSize;
+        m_BackBufferStates[i] = D3D12_RESOURCE_STATE_PRESENT;
     }
 }
 
@@ -216,6 +223,7 @@ void GraphicsDevice::BeginFrame() {
     
     m_CommandAllocators[m_FrameIndex]->Reset();
     m_CommandList->Reset(m_CommandAllocators[m_FrameIndex].Get(), nullptr);
+    m_SrvDescriptorCursor[m_FrameIndex] = 0;
 }
 
 void GraphicsDevice::EndFrame() {
@@ -267,6 +275,9 @@ void GraphicsDevice::ResizeBuffers(uint32_t width, uint32_t height) {
     
     CreateRenderTargets();
     CreateDepthStencil(width, height);
+    for (UINT i = 0; i < FrameCount; ++i) {
+        m_BackBufferStates[i] = D3D12_RESOURCE_STATE_PRESENT;
+    }
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE GraphicsDevice::GetCurrentRTV() const {
@@ -315,6 +326,58 @@ UINT GraphicsDevice::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type) {
         return srvOffset++;
     }
     return 0;
+}
+
+DescriptorHandle GraphicsDevice::AllocateSrvDescriptor(UINT count) {
+    constexpr UINT frameCapacity = kSrvDescriptorsPerFrame;
+    if (count == 0 || count > frameCapacity) {
+        std::ostringstream oss;
+        oss << "Invalid descriptor count; must be between 1 and " << frameCapacity << " (requested " << count << ")";
+        throw std::runtime_error(oss.str());
+    }
+
+    UINT frameCursor = m_SrvDescriptorCursor[m_FrameIndex];
+    if (count > frameCapacity - frameCursor) {
+        std::ostringstream oss;
+        oss << "SRV descriptor heap exhausted for the current frame (requested " << count
+            << ", available " << (frameCapacity - frameCursor) << ")";
+        throw std::runtime_error(oss.str());
+    }
+
+    const UINT baseOffset = m_FrameIndex * frameCapacity + frameCursor;
+    m_SrvDescriptorCursor[m_FrameIndex] = frameCursor + count;
+
+    DescriptorHandle handle{};
+    handle.CPUHandle = m_SRVHeap->GetCPUDescriptorHandleForHeapStart();
+    handle.CPUHandle.ptr += static_cast<SIZE_T>(baseOffset) * m_SRVDescriptorSize;
+
+    handle.GPUHandle = m_SRVHeap->GetGPUDescriptorHandleForHeapStart();
+    handle.GPUHandle.ptr += static_cast<UINT64>(baseOffset) * m_SRVDescriptorSize;
+    return handle;
+}
+
+void GraphicsDevice::TransitionBackBuffer(ID3D12GraphicsCommandList* commandList, UINT bufferIndex, D3D12_RESOURCE_STATES newState) {
+    const auto currentState = m_BackBufferStates[bufferIndex];
+    if (currentState == newState) {
+        return;
+    }
+
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = m_RenderTargets[bufferIndex].Get();
+    barrier.Transition.StateBefore = currentState;
+    barrier.Transition.StateAfter = newState;
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    commandList->ResourceBarrier(1, &barrier);
+    m_BackBufferStates[bufferIndex] = newState;
+}
+
+void GraphicsDevice::TransitionBackBufferToRenderTarget(ID3D12GraphicsCommandList* commandList) {
+    TransitionBackBuffer(commandList, GetBackBufferIndex(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+}
+
+void GraphicsDevice::TransitionBackBufferToPresent(ID3D12GraphicsCommandList* commandList) {
+    TransitionBackBuffer(commandList, GetBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
 }
 
 } // namespace Henky3D

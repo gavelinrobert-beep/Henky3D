@@ -1,9 +1,10 @@
 #include "Renderer.h"
-#include <d3dcompiler.h>
+#include <dxcapi.h>
 #include <DirectXMath.h>
 #include <stdexcept>
+#include <string>
 
-#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "dxcompiler.lib")
 
 using namespace DirectX;
 
@@ -13,6 +14,62 @@ struct Vertex {
     XMFLOAT3 Position;
     XMFLOAT4 Color;
 };
+
+static Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const char* source, const wchar_t* entryPoint, const wchar_t* target) {
+    static Microsoft::WRL::ComPtr<IDxcLibrary> library;
+    static Microsoft::WRL::ComPtr<IDxcCompiler> compiler;
+
+    if (!library) {
+        if (FAILED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)))) {
+            throw std::runtime_error("Failed to create DXC library");
+        }
+    }
+
+    if (!compiler) {
+        if (FAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)))) {
+            throw std::runtime_error("Failed to create DXC compiler");
+        }
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlobEncoding> sourceBlob;
+    if (FAILED(library->CreateBlobWithEncodingOnHeapCopy(source, static_cast<UINT32>(strlen(source)), CP_UTF8, &sourceBlob))) {
+        throw std::runtime_error("Failed to create shader blob");
+    }
+
+    Microsoft::WRL::ComPtr<IDxcOperationResult> result;
+    HRESULT hr = compiler->Compile(
+        sourceBlob.Get(),
+        L"inline.hlsl",
+        entryPoint,
+        target,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        &result);
+
+    if (FAILED(hr)) {
+        throw std::runtime_error("DXC compile invocation failed");
+    }
+
+    HRESULT status = S_OK;
+    result->GetStatus(&status);
+    if (FAILED(status)) {
+        Microsoft::WRL::ComPtr<IDxcBlobEncoding> errors;
+        result->GetErrorBuffer(&errors);
+        std::string message = "DXC compile failed";
+        if (errors && errors->GetBufferPointer() && errors->GetBufferSize() > 0) {
+            message.append(": ");
+            message.append(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize());
+        }
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob;
+    result->GetResult(&shaderBlob);
+    return shaderBlob;
+}
 
 Renderer::Renderer(GraphicsDevice* device) : m_Device(device) {
     CreatePipelineState();
@@ -28,8 +85,7 @@ void Renderer::CreatePipelineState() {
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     ComPtr<ID3DBlob> signature;
-    ComPtr<ID3DBlob> error;
-    if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error))) {
+    if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr))) {
         throw std::runtime_error("Failed to serialize root signature");
     }
     if (FAILED(m_Device->GetDevice()->CreateRootSignature(0, signature->GetBufferPointer(), 
@@ -68,18 +124,8 @@ void Renderer::CreatePipelineState() {
         }
     )";
 
-    ComPtr<ID3DBlob> vertexShader;
-    ComPtr<ID3DBlob> pixelShader;
-    
-    if (FAILED(D3DCompile(vertexShaderCode, strlen(vertexShaderCode), nullptr, nullptr, nullptr,
-        "VSMain", "vs_5_1", 0, 0, &vertexShader, &error))) {
-        throw std::runtime_error("Failed to compile vertex shader");
-    }
-    
-    if (FAILED(D3DCompile(pixelShaderCode, strlen(pixelShaderCode), nullptr, nullptr, nullptr,
-        "PSMain", "ps_5_1", 0, 0, &pixelShader, &error))) {
-        throw std::runtime_error("Failed to compile pixel shader");
-    }
+    ComPtr<IDxcBlob> vertexShader = CompileShader(vertexShaderCode, L"VSMain", L"vs_6_6");
+    ComPtr<IDxcBlob> pixelShader = CompileShader(pixelShaderCode, L"PSMain", L"ps_6_6");
 
     // Input layout
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {

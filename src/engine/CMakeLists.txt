@@ -23,7 +23,7 @@ target_link_libraries(Henky3DEngine PUBLIC
     imgui
     d3d12.lib
     dxgi.lib
-    d3dcompiler.lib
+    dxcompiler.lib
 )
 
 target_compile_features(Henky3DEngine PUBLIC cxx_std_20)

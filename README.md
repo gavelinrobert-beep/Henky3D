@@ -6,12 +6,13 @@ Minimal PC Graphics Engine with DirectX 12
 - **High-Resolution Timer**: Precise frame timing and FPS counter utilities
 - **Raw Input**: Raw mouse and keyboard input handling for responsive controls
 - **DirectX 12 Rendering Pipeline**:
-  - Device and command queue setup (graphics + copy queues)
+  - Device and command queue setup (graphics + compute + copy queues)
   - Flip-model swapchain with sRGB color space output
   - RTV/DSV descriptor heaps with allocation helpers
   - Upload buffer helper utilities
   - Depth buffer with D32_FLOAT format
   - Fence-based GPU synchronization and timeline management
+  - Per-frame GPU-visible SRV heap ring for transient descriptors
 - **Test Triangle Rendering**: Simple colored triangle with sRGB output
 - **EnTT Entity Component System**:
   - Transform component with position, rotation, scale
@@ -108,8 +109,9 @@ Henky3D/
 ## Development Notes
 - All code uses C++20 features
 - DirectX 12 Debug Layer enabled in Debug builds
-- Resource barriers handle state transitions properly
+- Resource barriers handle state transitions with tracked swapchain states
 - Upload buffers remain mapped for efficient updates
+- Inline shaders compiled with DXC targeting Shader Model 6
 
 ## Future Enhancements
 This is a minimal scaffold. Potential additions:

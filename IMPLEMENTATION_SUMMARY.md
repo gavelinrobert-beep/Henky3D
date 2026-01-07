@@ -12,24 +12,25 @@
 - **Device Initialization**: D3D12 device creation with debug layer support
 - **Command Queues**: 
   - Graphics queue for rendering commands
+  - Compute queue for async compute workloads
   - Copy queue for upload operations
 - **Swapchain**: Flip-model with DXGI_SWAP_EFFECT_FLIP_DISCARD and tearing support
 - **Descriptor Heaps**:
   - RTV heap for render target views (2 descriptors)
   - DSV heap for depth stencil view (1 descriptor)
-  - SRV heap for shader resources and ImGui (1000 descriptors)
+  - SRV heap for shader resources and ImGui (1000 descriptors) with per-frame ring cursor
   - Thread-safe descriptor allocation helper
 - **Render Targets**: sRGB format (DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
 - **Depth Buffer**: D32_FLOAT format with proper clear values
 - **Upload Buffers**: Helper function for creating persistently mapped upload buffers
 - **Synchronization**: Per-frame fence values with CPU-GPU synchronization
-- **Resource State Transitions**: Proper barriers between PRESENT and RENDER_TARGET states
+- **Resource State Transitions**: Explicit tracked barriers between PRESENT and RENDER_TARGET states
 
 ### 3. Test Rendering ✓
 - **Triangle Rendering**:
   - Vertex structure with position (XMFLOAT3) and color (XMFLOAT4)
   - Root signature creation
-  - HLSL vertex and pixel shaders (inline source)
+  - HLSL vertex and pixel shaders (inline source) compiled with DXC (SM 6)
   - Graphics pipeline state with depth testing enabled
   - Vertex buffer with 3 colored vertices (RGB triangle)
 
@@ -80,7 +81,7 @@ Henky3D/
 ### 8. Build System ✓
 - **CMake 3.20+**: Modern CMake with proper target dependencies
 - **C++20**: Standard requirement across all targets
-- **Libraries**: Automatic linking of d3d12, dxgi, d3dcompiler
+- **Libraries**: Automatic linking of d3d12, dxgi, dxcompiler
 - **Organization**: Separate static library for engine, executable for application
 
 ### 9. Code Quality ✓
@@ -88,7 +89,7 @@ Henky3D/
 - **Thread Safety**: std::atomic for descriptor allocation
 - **Memory Management**: ComPtr for automatic resource cleanup
 - **Exception Handling**: Proper error messages with std::runtime_error
-- **Resource Transitions**: Correct state management for render targets
+- **Resource Transitions**: Correct state management for render targets with tracked swapchain states
 
 ## Technical Highlights
 
@@ -99,6 +100,7 @@ Henky3D/
 - sRGB color space for correct gamma
 - Flip-model swapchain for modern presentation
 - Debug layer enabled in Debug builds
+- DXC compilation path targeting Shader Model 6 for inline shaders
 
 ### Modern C++20 Features
 - `std::chrono` for timing
