@@ -4,6 +4,7 @@
 #include <wrl/client.h>
 #include <memory>
 #include <vector>
+#include <array>
 
 using Microsoft::WRL::ComPtr;
 
@@ -15,6 +16,11 @@ struct UploadBuffer {
     ComPtr<ID3D12Resource> Resource;
     void* MappedData = nullptr;
     UINT64 Size = 0;
+};
+
+struct DescriptorHandle {
+    D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle{};
+    D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle{};
 };
 
 class GraphicsDevice {
@@ -34,6 +40,8 @@ public:
     ID3D12Device* GetDevice() const { return m_Device.Get(); }
     ID3D12GraphicsCommandList* GetCommandList() const { return m_CommandList.Get(); }
     ID3D12CommandQueue* GetCommandQueue() const { return m_CommandQueue.Get(); }
+    ID3D12CommandQueue* GetCopyQueue() const { return m_CopyQueue.Get(); }
+    ID3D12CommandQueue* GetComputeQueue() const { return m_ComputeQueue.Get(); }
     IDXGISwapChain3* GetSwapChain() const { return m_SwapChain.Get(); }
     
     UINT GetCurrentFrameIndex() const { return m_FrameIndex; }
@@ -41,9 +49,15 @@ public:
     
     D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV() const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetDSV() const;
+    ID3D12DescriptorHeap* GetSrvHeap() const { return m_SRVHeap.Get(); }
     
     UploadBuffer CreateUploadBuffer(UINT64 size);
     UINT AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type);
+    DescriptorHandle AllocateSrvDescriptor(UINT count = 1);
+
+    void TransitionBackBuffer(ID3D12GraphicsCommandList* commandList, UINT bufferIndex, D3D12_RESOURCE_STATES newState);
+    void TransitionBackBufferToRenderTarget(ID3D12GraphicsCommandList* commandList);
+    void TransitionBackBufferToPresent(ID3D12GraphicsCommandList* commandList);
 
 private:
     void CreateDeviceAndQueues();
@@ -57,6 +71,7 @@ private:
     ComPtr<IDXGIFactory6> m_Factory;
     ComPtr<ID3D12Device> m_Device;
     ComPtr<ID3D12CommandQueue> m_CommandQueue;
+    ComPtr<ID3D12CommandQueue> m_ComputeQueue;
     ComPtr<ID3D12CommandQueue> m_CopyQueue;
     ComPtr<IDXGISwapChain3> m_SwapChain;
     
@@ -81,6 +96,12 @@ private:
     
     uint32_t m_Width;
     uint32_t m_Height;
+
+    // GPU-visible SRV descriptors reserved per-frame (matches ImGui defaults and transient SRV needs)
+    static constexpr UINT kSrvDescriptorCapacity = 1000;
+    static constexpr UINT kSrvDescriptorsPerFrame = kSrvDescriptorCapacity / FrameCount;
+    std::array<UINT, FrameCount> m_SrvDescriptorCursor{};
+    std::array<D3D12_RESOURCE_STATES, FrameCount> m_BackBufferStates{};
 };
 
 } // namespace Henky3D

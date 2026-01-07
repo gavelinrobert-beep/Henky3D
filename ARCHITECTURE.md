@@ -61,6 +61,9 @@
 │     ├─── Command Queue (Graphics)                               │
 │     │       └── Execute command lists                            │
 │     │                                                            │
+│     ├─── Command Queue (Compute)                                │
+│     │       └── Async compute workloads                          │
+│     │                                                            │
 │     ├─── Command Queue (Copy)                                   │
 │     │       └── Upload operations                                │
 │     │                                                            │
@@ -71,7 +74,7 @@
 │     ├─── Descriptor Heaps                                       │
 │     │       ├── RTV Heap (Render Target Views)                  │
 │     │       ├── DSV Heap (Depth Stencil View)                   │
-│     │       └── SRV Heap (Shader Resource Views for ImGui)      │
+│     │       └── SRV Heap (GPU-visible ring for transient SRVs)  │
 │     │                                                            │
 │     ├─── Depth Stencil Buffer                                   │
 │     │       └── D32_FLOAT format                                │
