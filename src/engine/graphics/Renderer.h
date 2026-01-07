@@ -45,6 +45,7 @@ private:
     ComPtr<ID3D12RootSignature> m_RootSignature;
     ComPtr<ID3D12PipelineState> m_DepthPrepassPSO;
     ComPtr<ID3D12PipelineState> m_ForwardPSO;
+    ComPtr<ID3D12PipelineState> m_ForwardNoPrepassPSO;
     
     ComPtr<ID3D12Resource> m_VertexBuffer;
     ComPtr<ID3D12Resource> m_IndexBuffer;

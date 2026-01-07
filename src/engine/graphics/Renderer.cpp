@@ -190,7 +190,7 @@ void Renderer::CreateForwardPipeline() {
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 
-    // PSO
+    // PSO with depth prepass enabled (EQUAL comparison, no depth write)
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
     psoDesc.pRootSignature = m_RootSignature.Get();
     psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
@@ -201,8 +201,8 @@ void Renderer::CreateForwardPipeline() {
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
     psoDesc.RasterizerState.FrontCounterClockwise = FALSE;
     psoDesc.DepthStencilState.DepthEnable = TRUE;
-    psoDesc.DepthStencilState.DepthWriteMask = m_DepthPrepassEnabled ? D3D12_DEPTH_WRITE_MASK_ZERO : D3D12_DEPTH_WRITE_MASK_ALL;
-    psoDesc.DepthStencilState.DepthFunc = m_DepthPrepassEnabled ? D3D12_COMPARISON_FUNC_EQUAL : D3D12_COMPARISON_FUNC_LESS;
+    psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
     psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     psoDesc.NumRenderTargets = 1;
@@ -212,6 +212,14 @@ void Renderer::CreateForwardPipeline() {
 
     if (FAILED(m_Device->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_ForwardPSO)))) {
         throw std::runtime_error("Failed to create forward pipeline state");
+    }
+
+    // PSO without depth prepass (LESS comparison, depth write enabled)
+    psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+
+    if (FAILED(m_Device->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_ForwardNoPrepassPSO)))) {
+        throw std::runtime_error("Failed to create forward no-prepass pipeline state");
     }
 }
 
@@ -382,8 +390,10 @@ void Renderer::RenderScene(ECSWorld* world, bool enableDepthPrepass) {
         }
     }
 
-    // Forward pass
-    commandList->SetPipelineState(m_ForwardPSO.Get());
+    // Forward pass - use appropriate PSO based on whether depth prepass was used
+    commandList->SetPipelineState(
+        (enableDepthPrepass && m_DepthPrepassEnabled) ? m_ForwardPSO.Get() : m_ForwardNoPrepassPSO.Get()
+    );
 
     for (auto entity : view) {
         auto& transform = view.get<Transform>(entity);
