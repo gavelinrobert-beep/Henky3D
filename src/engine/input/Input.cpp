@@ -1,4 +1,5 @@
 #include "Input.h"
+#include <stdexcept>
 
 namespace Henky3D {
 
@@ -27,7 +28,7 @@ void Input::Initialize(HWND hwnd) {
     rid[1].hwndTarget = hwnd;
     
     if (!RegisterRawInputDevices(rid, 2, sizeof(RAWINPUTDEVICE))) {
-        // Failed to register raw input devices
+        throw std::runtime_error("Failed to register raw input devices");
     }
 }
 

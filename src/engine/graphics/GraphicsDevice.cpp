@@ -1,6 +1,7 @@
 #include "GraphicsDevice.h"
 #include "../core/Window.h"
 #include <stdexcept>
+#include <atomic>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -295,7 +296,7 @@ UploadBuffer GraphicsDevice::CreateUploadBuffer(UINT64 size) {
 }
 
 UINT GraphicsDevice::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type) {
-    static UINT srvOffset = 0;
+    static std::atomic<UINT> srvOffset = 0;
     if (type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
         return srvOffset++;
     }

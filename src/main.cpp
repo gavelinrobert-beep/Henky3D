@@ -74,7 +74,9 @@ private:
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         
         ID3D12DescriptorHeap* srvHeap = nullptr;
-        m_Device->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvHeap));
+        if (FAILED(m_Device->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvHeap)))) {
+            throw std::runtime_error("Failed to create ImGui descriptor heap");
+        }
 
         ImGui_ImplWin32_Init(m_Window->GetHandle());
         ImGui_ImplDX12_Init(
