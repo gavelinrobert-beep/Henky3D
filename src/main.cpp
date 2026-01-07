@@ -3,8 +3,11 @@
 #include "engine/input/Input.h"
 #include "engine/graphics/GraphicsDevice.h"
 #include "engine/graphics/Renderer.h"
+#include "engine/graphics/ConstantBuffers.h"
 #include "engine/ecs/ECSWorld.h"
 #include "engine/ecs/Components.h"
+#include "engine/ecs/TransformSystem.h"
+#include "engine/ecs/CullingSystem.h"
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
@@ -40,6 +43,7 @@ public:
     void Run() {
         Timer timer;
         FPSCounter fpsCounter;
+        m_TotalTime = 0.0f;
 
         while (m_Running) {
             if (!m_Window->ProcessMessages()) {
@@ -47,11 +51,12 @@ public:
                 break;
             }
 
-            float deltaTime = timer.GetDeltaTime();
-            fpsCounter.Update(deltaTime);
+            m_DeltaTime = timer.GetDeltaTime();
+            fpsCounter.Update(m_DeltaTime);
+            m_TotalTime += m_DeltaTime;
             
             Input::Update();
-            Update(deltaTime);
+            Update(m_DeltaTime);
             Render(fpsCounter);
         }
     }
@@ -92,7 +97,8 @@ private:
     void InitializeScene() {
         // Create camera entity
         auto cameraEntity = m_ECS->CreateEntity();
-        m_ECS->AddComponent<Camera>(cameraEntity);
+        auto& camera = m_ECS->AddComponent<Camera>(cameraEntity);
+        camera.AspectRatio = static_cast<float>(m_Window->GetWidth()) / static_cast<float>(m_Window->GetHeight());
         m_CameraEntity = cameraEntity;
 
         // Create light entity
@@ -102,15 +108,52 @@ private:
         light.Direction = { 0.0f, -1.0f, 0.5f };
         light.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-        // Create a renderable entity
-        auto entity = m_ECS->CreateEntity();
-        m_ECS->AddComponent<Transform>(entity);
-        m_ECS->AddComponent<Renderable>(entity);
+        // Create a spinning cube at the center
+        auto cubeEntity = m_ECS->CreateEntity();
+        auto& transform = m_ECS->AddComponent<Transform>(cubeEntity);
+        transform.Position = { 0.0f, 0.0f, 0.0f };
+        m_ECS->AddComponent<Renderable>(cubeEntity);
+        m_ECS->AddComponent<BoundingBox>(cubeEntity);
+
+        // Create a second cube to the right
+        auto cube2Entity = m_ECS->CreateEntity();
+        auto& transform2 = m_ECS->AddComponent<Transform>(cube2Entity);
+        transform2.Position = { 2.0f, 0.0f, 0.0f };
+        auto& renderable2 = m_ECS->AddComponent<Renderable>(cube2Entity);
+        renderable2.Color = { 0.3f, 1.0f, 0.3f, 1.0f };
+        m_ECS->AddComponent<BoundingBox>(cube2Entity);
+
+        // Create a third cube to the left
+        auto cube3Entity = m_ECS->CreateEntity();
+        auto& transform3 = m_ECS->AddComponent<Transform>(cube3Entity);
+        transform3.Position = { -2.0f, 0.0f, 0.0f };
+        auto& renderable3 = m_ECS->AddComponent<Renderable>(cube3Entity);
+        renderable3.Color = { 0.3f, 0.3f, 1.0f, 1.0f };
+        m_ECS->AddComponent<BoundingBox>(cube3Entity);
     }
 
     void Update(float deltaTime) {
         m_ECS->Update(deltaTime);
         UpdateCamera(deltaTime);
+        UpdateScene(deltaTime);
+        
+        // Update transform hierarchy
+        TransformSystem::UpdateTransforms(m_ECS.get());
+    }
+
+    void UpdateScene(float deltaTime) {
+        // Rotate the first cube
+        auto view = m_ECS->GetRegistry().view<Transform, Renderable>();
+        int cubeIndex = 0;
+        for (auto entity : view) {
+            auto& transform = view.get<Transform>(entity);
+            if (cubeIndex == 0) {
+                transform.Rotation.y += deltaTime;
+                transform.Rotation.x += deltaTime * 0.5f;
+                transform.MarkDirty();
+            }
+            cubeIndex++;
+        }
     }
 
     void UpdateCamera(float deltaTime) {
@@ -158,6 +201,7 @@ private:
 
     void Render(const FPSCounter& fpsCounter) {
         m_Device->BeginFrame();
+        m_Renderer->BeginFrame();
         
         auto commandList = m_Device->GetCommandList();
         
@@ -186,8 +230,27 @@ private:
         scissor.bottom = m_Window->GetHeight();
         commandList->RSSetScissorRects(1, &scissor);
 
-        // Render triangle
-        m_Renderer->RenderTriangle();
+        // Setup per-frame constants
+        if (m_ECS->HasComponent<Camera>(m_CameraEntity)) {
+            auto& camera = m_ECS->GetComponent<Camera>(m_CameraEntity);
+            camera.AspectRatio = static_cast<float>(m_Window->GetWidth()) / static_cast<float>(m_Window->GetHeight());
+
+            PerFrameConstants perFrameConstants;
+            DirectX::XMMATRIX view = camera.GetViewMatrix();
+            DirectX::XMMATRIX projection = camera.GetProjectionMatrix();
+            
+            DirectX::XMStoreFloat4x4(&perFrameConstants.ViewMatrix, DirectX::XMMatrixTranspose(view));
+            DirectX::XMStoreFloat4x4(&perFrameConstants.ProjectionMatrix, DirectX::XMMatrixTranspose(projection));
+            DirectX::XMStoreFloat4x4(&perFrameConstants.ViewProjectionMatrix, DirectX::XMMatrixTranspose(view * projection));
+            perFrameConstants.CameraPosition = DirectX::XMFLOAT4(camera.Position.x, camera.Position.y, camera.Position.z, 1.0f);
+            perFrameConstants.Time = m_TotalTime;
+            perFrameConstants.DeltaTime = m_DeltaTime;
+
+            m_Renderer->SetPerFrameConstants(perFrameConstants);
+
+            // Render scene
+            m_Renderer->RenderScene(m_ECS.get(), m_DepthPrepassEnabled);
+        }
 
         // Render ImGui
         RenderImGui(fpsCounter);
@@ -205,11 +268,16 @@ private:
 
         // Main overlay window
         ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         
         if (ImGui::Begin("Henky3D Engine")) {
             ImGui::Text("FPS: %.1f", fpsCounter.GetFPS());
             ImGui::Text("Frame Time: %.2f ms", fpsCounter.GetFrameTime());
+            
+            ImGui::Separator();
+            ImGui::Text("Rendering:");
+            ImGui::Checkbox("Enable Depth Prepass", &m_DepthPrepassEnabled);
+            m_Renderer->SetDepthPrepassEnabled(m_DepthPrepassEnabled);
             
             ImGui::Separator();
             ImGui::Text("Controls:");
@@ -256,6 +324,9 @@ private:
     entt::entity m_CameraEntity;
     bool m_Running = true;
     bool m_CameraControlEnabled = false;
+    bool m_DepthPrepassEnabled = true;
+    float m_TotalTime = 0.0f;
+    float m_DeltaTime = 0.0f;
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
