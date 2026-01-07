@@ -1,19 +1,6 @@
 // Forward Pass Pixel Shader
 
-struct PerFrameConstants {
-    float4x4 ViewMatrix;
-    float4x4 ProjectionMatrix;
-    float4x4 ViewProjectionMatrix;
-    float4x4 LightViewProjectionMatrix;
-    float4 CameraPosition;
-    float4 LightDirection;
-    float4 LightColor;
-    float4 AmbientColor;
-    float Time;
-    float DeltaTime;
-    float ShadowBias;
-    float ShadowsEnabled;
-};
+#include "Common.hlsli"
 
 ConstantBuffer<PerFrameConstants> g_PerFrame : register(b0);
 

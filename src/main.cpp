@@ -250,6 +250,7 @@ private:
             }
             
             // Compute light view-projection for shadows
+            // TODO: Compute scene bounds dynamically from actual geometry
             DirectX::XMFLOAT3 sceneBoundsMin = { -5.0f, -5.0f, -5.0f };
             DirectX::XMFLOAT3 sceneBoundsMax = { 5.0f, 5.0f, 5.0f };
             DirectX::XMMATRIX lightViewProj = ShadowMap::ComputeLightViewProjection(

@@ -129,38 +129,45 @@ TextureHandle AssetRegistry::LoadTexture(const std::wstring& path) {
 }
 
 TextureHandle AssetRegistry::LoadTextureWIC(const std::wstring& path) {
-    // Initialize COM
-    CoInitialize(nullptr);
+    // Initialize COM (no-op if already initialized)
+    HRESULT hrCom = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    bool needsUninit = SUCCEEDED(hrCom);
 
     ComPtr<IWICImagingFactory> wicFactory;
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory2, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wicFactory)))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
     ComPtr<IWICBitmapDecoder> decoder;
     if (FAILED(wicFactory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ, 
                                                       WICDecodeMetadataCacheOnDemand, &decoder))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
     ComPtr<IWICBitmapFrameDecode> frame;
     if (FAILED(decoder->GetFrame(0, &frame))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
     UINT width, height;
     if (FAILED(frame->GetSize(&width, &height))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
     // Convert to RGBA format
     ComPtr<IWICFormatConverter> converter;
     if (FAILED(wicFactory->CreateFormatConverter(&converter))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
     if (FAILED(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
                                       WICBitmapDitherTypeNone, nullptr, 0.0f, WICBitmapPaletteTypeMedianCut))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
@@ -169,6 +176,7 @@ TextureHandle AssetRegistry::LoadTextureWIC(const std::wstring& path) {
     UINT bufferSize = stride * height;
     std::vector<uint8_t> pixelData(bufferSize);
     if (FAILED(converter->CopyPixels(nullptr, stride, bufferSize, pixelData.data()))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
@@ -210,6 +218,7 @@ TextureHandle AssetRegistry::LoadTextureWIC(const std::wstring& path) {
         D3D12_RESOURCE_STATE_COPY_DEST,
         nullptr,
         IID_PPV_ARGS(&texture->Resource)))) {
+        if (needsUninit) CoUninitialize();
         return TextureHandle{};
     }
 
@@ -249,6 +258,9 @@ TextureHandle AssetRegistry::LoadTextureWIC(const std::wstring& path) {
     TextureHandle handle;
     handle.Index = static_cast<uint32_t>(m_Textures.size());
     m_Textures.push_back(std::move(texture));
+
+    // Cleanup COM if we initialized it
+    if (needsUninit) CoUninitialize();
 
     return handle;
 }
