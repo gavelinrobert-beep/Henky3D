@@ -1,5 +1,6 @@
 #include "Input.h"
 #include <stdexcept>
+#include <memory>
 
 namespace Henky3D {
 

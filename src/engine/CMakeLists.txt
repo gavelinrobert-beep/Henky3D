@@ -33,6 +33,7 @@ target_include_directories(Henky3DEngine PUBLIC
 )
 
 target_link_libraries(Henky3DEngine PUBLIC
+    dx12_helpers
     entt
     imgui
     d3d12.lib

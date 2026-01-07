@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "../input/Input.h"
 #include <stdexcept>
+#include <windef.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -9,15 +10,15 @@ namespace Henky3D {
 Window::Window(const std::string& title, uint32_t width, uint32_t height)
     : m_Width(width), m_Height(height), m_Title(title), m_Handle(nullptr) {
     
-    WNDCLASSEX wc = {};
-    wc.cbSize = sizeof(WNDCLASSEX);
+    WNDCLASSEXW wc = {};
+    wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.lpszClassName = L"Henky3DWindowClass";
     
-    if (!RegisterClassEx(&wc)) {
+    if (!RegisterClassExW(&wc)) {
         throw std::runtime_error("Failed to register window class");
     }
 
@@ -25,7 +26,7 @@ Window::Window(const std::string& title, uint32_t width, uint32_t height)
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
     std::wstring wTitle(title.begin(), title.end());
-    m_Handle = CreateWindowEx(
+    m_Handle = CreateWindowExW(
         0,
         wc.lpszClassName,
         wTitle.c_str(),
