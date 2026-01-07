@@ -8,9 +8,11 @@
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
+#include <wrl/client.h>
 #include <memory>
 
 using namespace Henky3D;
+using Microsoft::WRL::ComPtr;
 
 class Application {
 public:
@@ -159,10 +161,14 @@ private:
         
         auto commandList = m_Device->GetCommandList();
         
+        // Get current render target
+        ComPtr<ID3D12Resource> renderTarget;
+        m_Device->GetSwapChain()->GetBuffer(m_Device->GetBackBufferIndex(), IID_PPV_ARGS(&renderTarget));
+        
         // Transition to render target
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = m_Device->GetSwapChain()->GetBuffer(m_Device->GetBackBufferIndex(), IID_PPV_ARGS(&barrier.Transition.pResource));
+        barrier.Transition.pResource = renderTarget.Get();
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
         commandList->ResourceBarrier(1, &barrier);

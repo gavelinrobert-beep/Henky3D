@@ -129,9 +129,13 @@ void GraphicsDevice::CreateDescriptorHeaps() {
 void GraphicsDevice::CreateRenderTargets() {
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_RTVHeap->GetCPUDescriptorHandleForHeapStart();
     
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    
     for (UINT i = 0; i < FrameCount; i++) {
         m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&m_RenderTargets[i]));
-        m_Device->CreateRenderTargetView(m_RenderTargets[i].Get(), nullptr, rtvHandle);
+        m_Device->CreateRenderTargetView(m_RenderTargets[i].Get(), &rtvDesc, rtvHandle);
         rtvHandle.ptr += m_RTVDescriptorSize;
     }
 }
