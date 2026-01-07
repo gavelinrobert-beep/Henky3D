@@ -4,6 +4,7 @@
 #include "engine/graphics/GraphicsDevice.h"
 #include "engine/graphics/Renderer.h"
 #include "engine/graphics/ConstantBuffers.h"
+#include "engine/graphics/ShadowMap.h"
 #include "engine/ecs/ECSWorld.h"
 #include "engine/ecs/Components.h"
 #include "engine/ecs/TransformSystem.h"
@@ -235,6 +236,25 @@ private:
             auto& camera = m_ECS->GetComponent<Camera>(m_CameraEntity);
             camera.AspectRatio = static_cast<float>(m_Window->GetWidth()) / static_cast<float>(m_Window->GetHeight());
 
+            // Get directional light from scene
+            DirectX::XMFLOAT3 lightDirection = { 0.5f, -1.0f, 0.3f };
+            DirectX::XMFLOAT4 lightColor = { 1.0f, 1.0f, 0.9f, 1.0f };
+            auto lightView = m_ECS->GetRegistry().view<Light>();
+            for (auto entity : lightView) {
+                auto& light = lightView.get<Light>(entity);
+                if (light.LightType == Light::Type::Directional) {
+                    lightDirection = light.Direction;
+                    lightColor = light.Color;
+                    break;
+                }
+            }
+            
+            // Compute light view-projection for shadows
+            DirectX::XMFLOAT3 sceneBoundsMin = { -5.0f, -5.0f, -5.0f };
+            DirectX::XMFLOAT3 sceneBoundsMax = { 5.0f, 5.0f, 5.0f };
+            DirectX::XMMATRIX lightViewProj = ShadowMap::ComputeLightViewProjection(
+                lightDirection, sceneBoundsMin, sceneBoundsMax);
+
             PerFrameConstants perFrameConstants;
             DirectX::XMMATRIX view = camera.GetViewMatrix();
             DirectX::XMMATRIX projection = camera.GetProjectionMatrix();
@@ -242,14 +262,25 @@ private:
             DirectX::XMStoreFloat4x4(&perFrameConstants.ViewMatrix, DirectX::XMMatrixTranspose(view));
             DirectX::XMStoreFloat4x4(&perFrameConstants.ProjectionMatrix, DirectX::XMMatrixTranspose(projection));
             DirectX::XMStoreFloat4x4(&perFrameConstants.ViewProjectionMatrix, DirectX::XMMatrixTranspose(view * projection));
+            DirectX::XMStoreFloat4x4(&perFrameConstants.LightViewProjectionMatrix, DirectX::XMMatrixTranspose(lightViewProj));
             perFrameConstants.CameraPosition = DirectX::XMFLOAT4(camera.Position.x, camera.Position.y, camera.Position.z, 1.0f);
+            perFrameConstants.LightDirection = DirectX::XMFLOAT4(lightDirection.x, lightDirection.y, lightDirection.z, 0.0f);
+            perFrameConstants.LightColor = lightColor;
+            perFrameConstants.AmbientColor = DirectX::XMFLOAT4(0.2f, 0.2f, 0.25f, 1.0f);
             perFrameConstants.Time = m_TotalTime;
             perFrameConstants.DeltaTime = m_DeltaTime;
+            perFrameConstants.ShadowBias = m_ShadowBias;
+            perFrameConstants.ShadowsEnabled = m_ShadowsEnabled ? 1.0f : 0.0f;
 
             m_Renderer->SetPerFrameConstants(perFrameConstants);
 
+            // Render shadow pass if enabled
+            if (m_ShadowsEnabled) {
+                m_Renderer->RenderShadowPass(m_ECS.get());
+            }
+
             // Render scene
-            m_Renderer->RenderScene(m_ECS.get(), m_DepthPrepassEnabled);
+            m_Renderer->RenderScene(m_ECS.get(), m_DepthPrepassEnabled, m_ShadowsEnabled);
         }
 
         // Render ImGui
@@ -278,6 +309,18 @@ private:
             ImGui::Text("Rendering:");
             ImGui::Checkbox("Enable Depth Prepass", &m_DepthPrepassEnabled);
             m_Renderer->SetDepthPrepassEnabled(m_DepthPrepassEnabled);
+            ImGui::Checkbox("Enable Shadows", &m_ShadowsEnabled);
+            m_Renderer->SetShadowsEnabled(m_ShadowsEnabled);
+            if (m_ShadowsEnabled) {
+                ImGui::SliderFloat("Shadow Bias", &m_ShadowBias, 0.0f, 0.01f, "%.4f");
+            }
+            
+            ImGui::Separator();
+            ImGui::Text("Stats:");
+            auto& stats = m_Renderer->GetStats();
+            ImGui::Text("Draw Calls: %u", stats.DrawCount);
+            ImGui::Text("Culled: %u", stats.CulledCount);
+            ImGui::Text("Triangles: %u", stats.TriangleCount);
             
             ImGui::Separator();
             ImGui::Text("Controls:");
@@ -325,6 +368,8 @@ private:
     bool m_Running = true;
     bool m_CameraControlEnabled = false;
     bool m_DepthPrepassEnabled = true;
+    bool m_ShadowsEnabled = true;
+    float m_ShadowBias = 0.005f;
     float m_TotalTime = 0.0f;
     float m_DeltaTime = 0.0f;
 };
