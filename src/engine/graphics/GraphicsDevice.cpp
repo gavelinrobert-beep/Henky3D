@@ -119,7 +119,7 @@ void GraphicsDevice::CreateDescriptorHeaps() {
     }
 
     D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-    dsvHeapDesc.NumDescriptors = 1;
+    dsvHeapDesc.NumDescriptors = 10; // Support main depth buffer + shadow maps
     dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     if (FAILED(m_Device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)))) {
