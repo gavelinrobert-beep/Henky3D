@@ -49,8 +49,13 @@ D3D12_GPU_VIRTUAL_ADDRESS ConstantBufferAllocator::Allocate(UINT sizeInBytes, vo
     const UINT alignedSize = (sizeInBytes + alignment - 1) & ~(alignment - 1);
 
     // Check if we have enough space in current frame's buffer
-    if (m_CurrentOffset + alignedSize > BufferSizePerFrame) {
-        throw std::runtime_error("Constant buffer allocator exhausted for current frame");
+    const UINT available = BufferSizePerFrame - m_CurrentOffset;
+    if (alignedSize > available) {
+        char errorMsg[256];
+        snprintf(errorMsg, sizeof(errorMsg), 
+            "Constant buffer allocator exhausted: requested %u bytes (aligned: %u), available %u bytes in frame %u",
+            sizeInBytes, alignedSize, available, m_FrameIndex);
+        throw std::runtime_error(errorMsg);
     }
 
     const UINT frameOffset = m_FrameIndex * BufferSizePerFrame;

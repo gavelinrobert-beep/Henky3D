@@ -7,9 +7,9 @@ using namespace DirectX;
 
 // Per-frame constants updated once per frame
 struct alignas(256) PerFrameConstants {
-    XMMATRIX ViewMatrix;
-    XMMATRIX ProjectionMatrix;
-    XMMATRIX ViewProjectionMatrix;
+    XMFLOAT4X4 ViewMatrix;
+    XMFLOAT4X4 ProjectionMatrix;
+    XMFLOAT4X4 ViewProjectionMatrix;
     XMFLOAT4 CameraPosition;
     float Time;
     float DeltaTime;
@@ -18,7 +18,7 @@ struct alignas(256) PerFrameConstants {
 
 // Per-draw constants updated for each draw call
 struct alignas(256) PerDrawConstants {
-    XMMATRIX WorldMatrix;
+    XMFLOAT4X4 WorldMatrix;
     UINT MaterialIndex;
     UINT Padding[3];
 };

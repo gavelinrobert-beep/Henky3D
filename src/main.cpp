@@ -51,12 +51,12 @@ public:
                 break;
             }
 
-            float deltaTime = timer.GetDeltaTime();
-            fpsCounter.Update(deltaTime);
-            m_TotalTime += deltaTime;
+            m_DeltaTime = timer.GetDeltaTime();
+            fpsCounter.Update(m_DeltaTime);
+            m_TotalTime += m_DeltaTime;
             
             Input::Update();
-            Update(deltaTime);
+            Update(m_DeltaTime);
             Render(fpsCounter);
         }
     }
@@ -239,12 +239,12 @@ private:
             DirectX::XMMATRIX view = camera.GetViewMatrix();
             DirectX::XMMATRIX projection = camera.GetProjectionMatrix();
             
-            DirectX::XMStoreFloat4x4(reinterpret_cast<DirectX::XMFLOAT4X4*>(&perFrameConstants.ViewMatrix), DirectX::XMMatrixTranspose(view));
-            DirectX::XMStoreFloat4x4(reinterpret_cast<DirectX::XMFLOAT4X4*>(&perFrameConstants.ProjectionMatrix), DirectX::XMMatrixTranspose(projection));
-            DirectX::XMStoreFloat4x4(reinterpret_cast<DirectX::XMFLOAT4X4*>(&perFrameConstants.ViewProjectionMatrix), DirectX::XMMatrixTranspose(view * projection));
+            DirectX::XMStoreFloat4x4(&perFrameConstants.ViewMatrix, DirectX::XMMatrixTranspose(view));
+            DirectX::XMStoreFloat4x4(&perFrameConstants.ProjectionMatrix, DirectX::XMMatrixTranspose(projection));
+            DirectX::XMStoreFloat4x4(&perFrameConstants.ViewProjectionMatrix, DirectX::XMMatrixTranspose(view * projection));
             perFrameConstants.CameraPosition = DirectX::XMFLOAT4(camera.Position.x, camera.Position.y, camera.Position.z, 1.0f);
             perFrameConstants.Time = m_TotalTime;
-            perFrameConstants.DeltaTime = 0.0f;
+            perFrameConstants.DeltaTime = m_DeltaTime;
 
             m_Renderer->SetPerFrameConstants(perFrameConstants);
 
@@ -326,6 +326,7 @@ private:
     bool m_CameraControlEnabled = false;
     bool m_DepthPrepassEnabled = true;
     float m_TotalTime = 0.0f;
+    float m_DeltaTime = 0.0f;
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {

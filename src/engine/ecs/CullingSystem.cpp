@@ -32,16 +32,11 @@ std::vector<entt::entity> CullingSystem::CullEntities(ECSWorld* world, const Fru
         XMFLOAT3 worldCenter;
         XMStoreFloat3(&worldCenter, centerVec);
 
-        // Transform extents (conservative approach: use max scale)
-        XMVECTOR scaleVec = XMVectorSet(
-            XMVectorGetX(worldMatrix.r[0]),
-            XMVectorGetY(worldMatrix.r[1]),
-            XMVectorGetZ(worldMatrix.r[2]),
-            0.0f
-        );
-        float maxScale = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
-        maxScale = std::max(maxScale, XMVectorGetX(XMVector3Length(worldMatrix.r[1])));
-        maxScale = std::max(maxScale, XMVectorGetX(XMVector3Length(worldMatrix.r[2])));
+        // Transform extents (conservative approach: compute max scale from each axis)
+        float scaleX = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
+        float scaleY = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
+        float scaleZ = XMVectorGetX(XMVector3Length(worldMatrix.r[2]));
+        float maxScale = std::max({scaleX, scaleY, scaleZ});
 
         XMFLOAT3 worldExtents = {
             localExtents.x * maxScale,

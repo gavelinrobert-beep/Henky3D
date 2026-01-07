@@ -17,7 +17,11 @@ namespace Henky3D {
 static std::wstring GetShaderPath(const wchar_t* filename) {
     // Shaders are in the shaders/ directory relative to executable
     wchar_t exePath[MAX_PATH];
-    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    DWORD result = GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    if (result == 0 || result == MAX_PATH) {
+        throw std::runtime_error("Failed to get executable path");
+    }
+    
     std::wstring path(exePath);
     size_t lastSlash = path.find_last_of(L"\\/");
     if (lastSlash != std::wstring::npos) {
@@ -225,7 +229,7 @@ void Renderer::CreateForwardPipeline() {
 
 void Renderer::CreateCubeGeometry() {
     // Cube vertices with normals and colors
-    Vertex cubeVertices[] = {
+    static const Vertex cubeVertices[] = {
         // Front face (red tint)
         { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.3f, 0.3f, 1.0f } },
         { { -0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.3f, 0.3f, 1.0f } },
@@ -263,7 +267,7 @@ void Renderer::CreateCubeGeometry() {
         { {  0.5f, -0.5f,  0.5f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.3f, 1.0f, 1.0f } }
     };
 
-    UINT16 cubeIndices[] = {
+    static const UINT16 cubeIndices[] = {
         0, 1, 2, 0, 2, 3,       // Front
         4, 5, 6, 4, 6, 7,       // Back
         8, 9, 10, 8, 10, 11,    // Left
@@ -349,7 +353,7 @@ void Renderer::DrawCube(const XMMATRIX& worldMatrix, const XMFLOAT4& color) {
 
     // Allocate and fill per-draw constants
     PerDrawConstants drawConstants;
-    XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(&drawConstants.WorldMatrix), XMMatrixTranspose(worldMatrix));
+    XMStoreFloat4x4(&drawConstants.WorldMatrix, XMMatrixTranspose(worldMatrix));
     drawConstants.MaterialIndex = 0;
 
     void* cpuAddress;
@@ -404,7 +408,5 @@ void Renderer::RenderScene(ECSWorld* world, bool enableDepthPrepass) {
         DrawCube(transform.GetMatrix(), renderable.Color);
     }
 }
-
-} // namespace Henky3D
 
 } // namespace Henky3D

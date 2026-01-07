@@ -35,7 +35,7 @@ void TransformSystem::UpdateTransformRecursive(ECSWorld* world, entt::entity ent
     // Only update if dirty
     if (transform.Dirty) {
         XMMATRIX localMatrix = transform.GetLocalMatrix();
-        XMMATRIX worldMatrix = localMatrix * parentWorld;
+        XMMATRIX worldMatrix = parentWorld * localMatrix;
         XMStoreFloat4x4(&transform.WorldMatrix, worldMatrix);
         transform.Dirty = false;
     }
