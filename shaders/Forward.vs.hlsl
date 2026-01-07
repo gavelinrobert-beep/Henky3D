@@ -1,20 +1,6 @@
 // Forward Pass Vertex Shader
 
-struct PerFrameConstants {
-    float4x4 ViewMatrix;
-    float4x4 ProjectionMatrix;
-    float4x4 ViewProjectionMatrix;
-    float4 CameraPosition;
-    float Time;
-    float DeltaTime;
-    float2 Padding;
-};
-
-struct PerDrawConstants {
-    float4x4 WorldMatrix;
-    uint MaterialIndex;
-    uint3 Padding;
-};
+#include "Common.hlsli"
 
 ConstantBuffer<PerFrameConstants> g_PerFrame : register(b0);
 ConstantBuffer<PerDrawConstants> g_PerDraw : register(b1);
@@ -30,6 +16,7 @@ struct PSInput {
     float3 WorldPos : POSITION0;
     float3 Normal : NORMAL;
     float4 Color : COLOR;
+    float4 ShadowPos : POSITION1;
 };
 
 PSInput VSMain(VSInput input) {
@@ -42,6 +29,9 @@ PSInput VSMain(VSInput input) {
     // Transform normal to world space (assuming uniform scale)
     output.Normal = mul(input.Normal, (float3x3)g_PerDraw.WorldMatrix);
     output.Color = input.Color;
+    
+    // Compute shadow map coordinates
+    output.ShadowPos = mul(worldPos, g_PerFrame.LightViewProjectionMatrix);
     
     return output;
 }

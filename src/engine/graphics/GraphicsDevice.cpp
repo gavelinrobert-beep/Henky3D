@@ -119,7 +119,7 @@ void GraphicsDevice::CreateDescriptorHeaps() {
     }
 
     D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-    dsvHeapDesc.NumDescriptors = 1;
+    dsvHeapDesc.NumDescriptors = 10; // Support main depth buffer + shadow maps
     dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     if (FAILED(m_Device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)))) {
@@ -353,6 +353,13 @@ DescriptorHandle GraphicsDevice::AllocateSrvDescriptor(UINT count) {
 
     handle.GPUHandle = m_SRVHeap->GetGPUDescriptorHandleForHeapStart();
     handle.GPUHandle.ptr += static_cast<UINT64>(baseOffset) * m_SRVDescriptorSize;
+    return handle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE GraphicsDevice::AllocateDsvDescriptor() {
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+    handle.ptr += static_cast<SIZE_T>(m_DsvDescriptorOffset) * m_DSVDescriptorSize;
+    m_DsvDescriptorOffset++;
     return handle;
 }
 
