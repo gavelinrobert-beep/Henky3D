@@ -10,10 +10,15 @@ struct alignas(256) PerFrameConstants {
     XMFLOAT4X4 ViewMatrix;
     XMFLOAT4X4 ProjectionMatrix;
     XMFLOAT4X4 ViewProjectionMatrix;
+    XMFLOAT4X4 LightViewProjectionMatrix;
     XMFLOAT4 CameraPosition;
+    XMFLOAT4 LightDirection;  // w component unused
+    XMFLOAT4 LightColor;      // rgb = color, a = intensity
+    XMFLOAT4 AmbientColor;    // rgb = color, a = intensity
     float Time;
     float DeltaTime;
-    float Padding[2];
+    float ShadowBias;
+    float ShadowsEnabled;  // 1.0 = enabled, 0.0 = disabled
 };
 
 // Per-draw constants updated for each draw call

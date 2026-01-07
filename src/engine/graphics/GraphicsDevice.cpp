@@ -356,6 +356,13 @@ DescriptorHandle GraphicsDevice::AllocateSrvDescriptor(UINT count) {
     return handle;
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE GraphicsDevice::AllocateDsvDescriptor() {
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+    handle.ptr += static_cast<SIZE_T>(m_DsvDescriptorOffset) * m_DSVDescriptorSize;
+    m_DsvDescriptorOffset++;
+    return handle;
+}
+
 void GraphicsDevice::TransitionBackBuffer(ID3D12GraphicsCommandList* commandList, UINT bufferIndex, D3D12_RESOURCE_STATES newState) {
     const auto currentState = m_BackBufferStates[bufferIndex];
     if (currentState == newState) {

@@ -11,6 +11,13 @@ set(ENGINE_SOURCES
     graphics/ConstantBufferAllocator.cpp
     graphics/ConstantBufferAllocator.h
     graphics/ConstantBuffers.h
+    graphics/Material.h
+    graphics/AssetRegistry.cpp
+    graphics/AssetRegistry.h
+    graphics/ShadowMap.cpp
+    graphics/ShadowMap.h
+    graphics/FrameGraph.cpp
+    graphics/FrameGraph.h
     ecs/Components.h
     ecs/ECSWorld.h
     ecs/TransformSystem.cpp

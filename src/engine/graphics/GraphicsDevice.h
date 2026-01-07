@@ -50,10 +50,12 @@ public:
     D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV() const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetDSV() const;
     ID3D12DescriptorHeap* GetSrvHeap() const { return m_SRVHeap.Get(); }
+    ID3D12DescriptorHeap* GetDsvHeap() const { return m_DSVHeap.Get(); }
     
     UploadBuffer CreateUploadBuffer(UINT64 size);
     UINT AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type);
     DescriptorHandle AllocateSrvDescriptor(UINT count = 1);
+    D3D12_CPU_DESCRIPTOR_HANDLE AllocateDsvDescriptor();
 
     void TransitionBackBuffer(ID3D12GraphicsCommandList* commandList, UINT bufferIndex, D3D12_RESOURCE_STATES newState);
     void TransitionBackBufferToRenderTarget(ID3D12GraphicsCommandList* commandList);
@@ -102,6 +104,9 @@ private:
     static constexpr UINT kSrvDescriptorsPerFrame = kSrvDescriptorCapacity / FrameCount;
     std::array<UINT, FrameCount> m_SrvDescriptorCursor{};
     std::array<D3D12_RESOURCE_STATES, FrameCount> m_BackBufferStates{};
+    
+    // DSV allocator
+    UINT m_DsvDescriptorOffset = 1; // 0 is main depth buffer
 };
 
 } // namespace Henky3D
