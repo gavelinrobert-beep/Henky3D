@@ -5,6 +5,7 @@
 #include "AssetRegistry.h"
 #include "ShadowMap.h"
 #include <d3d12.h>
+#include <dxcapi.h>
 #include <wrl/client.h>
 #include <vector>
 #include <memory>
