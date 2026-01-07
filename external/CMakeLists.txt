@@ -1,5 +1,9 @@
 # External dependencies
 
+# DirectX helpers (d3dx12.h)
+add_library(dx12_helpers INTERFACE)
+target_include_directories(dx12_helpers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # EnTT - Header-only ECS library
 add_library(entt INTERFACE)
 target_include_directories(entt INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/entt/single_include)

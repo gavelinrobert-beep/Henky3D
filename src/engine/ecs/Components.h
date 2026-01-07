@@ -6,6 +6,9 @@ namespace Henky3D {
 
 using namespace DirectX;
 
+// Forward declarations
+struct Frustum;
+
 struct Transform {
     XMFLOAT3 Position = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 Rotation = { 0.0f, 0.0f, 0.0f };
