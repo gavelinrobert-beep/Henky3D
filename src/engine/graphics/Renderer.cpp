@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
+#include <stdexcept>
 
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -28,9 +29,13 @@ void Renderer::CreatePipelineState() {
 
     ComPtr<ID3DBlob> signature;
     ComPtr<ID3DBlob> error;
-    D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
-    m_Device->GetDevice()->CreateRootSignature(0, signature->GetBufferPointer(), 
-        signature->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature));
+    if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error))) {
+        throw std::runtime_error("Failed to serialize root signature");
+    }
+    if (FAILED(m_Device->GetDevice()->CreateRootSignature(0, signature->GetBufferPointer(), 
+        signature->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)))) {
+        throw std::runtime_error("Failed to create root signature");
+    }
 
     // Shader code
     const char* vertexShaderCode = R"(
@@ -66,11 +71,15 @@ void Renderer::CreatePipelineState() {
     ComPtr<ID3DBlob> vertexShader;
     ComPtr<ID3DBlob> pixelShader;
     
-    D3DCompile(vertexShaderCode, strlen(vertexShaderCode), nullptr, nullptr, nullptr,
-        "VSMain", "vs_5_1", 0, 0, &vertexShader, &error);
+    if (FAILED(D3DCompile(vertexShaderCode, strlen(vertexShaderCode), nullptr, nullptr, nullptr,
+        "VSMain", "vs_5_1", 0, 0, &vertexShader, &error))) {
+        throw std::runtime_error("Failed to compile vertex shader");
+    }
     
-    D3DCompile(pixelShaderCode, strlen(pixelShaderCode), nullptr, nullptr, nullptr,
-        "PSMain", "ps_5_1", 0, 0, &pixelShader, &error);
+    if (FAILED(D3DCompile(pixelShaderCode, strlen(pixelShaderCode), nullptr, nullptr, nullptr,
+        "PSMain", "ps_5_1", 0, 0, &pixelShader, &error))) {
+        throw std::runtime_error("Failed to compile pixel shader");
+    }
 
     // Input layout
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
@@ -98,7 +107,9 @@ void Renderer::CreatePipelineState() {
     psoDesc.DSVFormat = GraphicsDevice::DepthStencilFormat;
     psoDesc.SampleDesc.Count = 1;
 
-    m_Device->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineState));
+    if (FAILED(m_Device->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineState)))) {
+        throw std::runtime_error("Failed to create graphics pipeline state");
+    }
 }
 
 void Renderer::CreateVertexBuffer() {
@@ -122,13 +133,15 @@ void Renderer::CreateVertexBuffer() {
     resourceDesc.SampleDesc.Count = 1;
     resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-    m_Device->GetDevice()->CreateCommittedResource(
+    if (FAILED(m_Device->GetDevice()->CreateCommittedResource(
         &heapProps,
         D3D12_HEAP_FLAG_NONE,
         &resourceDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
-        IID_PPV_ARGS(&m_VertexBuffer));
+        IID_PPV_ARGS(&m_VertexBuffer)))) {
+        throw std::runtime_error("Failed to create vertex buffer");
+    }
 
     UINT8* pVertexDataBegin;
     D3D12_RANGE readRange = { 0, 0 };

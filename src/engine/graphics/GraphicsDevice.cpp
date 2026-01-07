@@ -108,19 +108,25 @@ void GraphicsDevice::CreateDescriptorHeaps() {
     rtvHeapDesc.NumDescriptors = FrameCount;
     rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    m_Device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_RTVHeap));
+    if (FAILED(m_Device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_RTVHeap)))) {
+        throw std::runtime_error("Failed to create RTV descriptor heap");
+    }
 
     D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
     dsvHeapDesc.NumDescriptors = 1;
     dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    m_Device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap));
+    if (FAILED(m_Device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)))) {
+        throw std::runtime_error("Failed to create DSV descriptor heap");
+    }
 
     D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
     srvHeapDesc.NumDescriptors = 1000;
     srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SRVHeap));
+    if (FAILED(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SRVHeap)))) {
+        throw std::runtime_error("Failed to create SRV descriptor heap");
+    }
 
     m_RTVDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     m_DSVDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -160,36 +166,44 @@ void GraphicsDevice::CreateDepthStencil(uint32_t width, uint32_t height) {
     clearValue.DepthStencil.Depth = 1.0f;
     clearValue.DepthStencil.Stencil = 0;
 
-    m_Device->CreateCommittedResource(
+    if (FAILED(m_Device->CreateCommittedResource(
         &heapProps,
         D3D12_HEAP_FLAG_NONE,
         &resourceDesc,
         D3D12_RESOURCE_STATE_DEPTH_WRITE,
         &clearValue,
-        IID_PPV_ARGS(&m_DepthStencil));
+        IID_PPV_ARGS(&m_DepthStencil)))) {
+        throw std::runtime_error("Failed to create depth stencil buffer");
+    }
 
     m_Device->CreateDepthStencilView(m_DepthStencil.Get(), nullptr, GetDSV());
 }
 
 void GraphicsDevice::CreateCommandObjects() {
     for (UINT i = 0; i < FrameCount; i++) {
-        m_Device->CreateCommandAllocator(
+        if (FAILED(m_Device->CreateCommandAllocator(
             D3D12_COMMAND_LIST_TYPE_DIRECT,
-            IID_PPV_ARGS(&m_CommandAllocators[i]));
+            IID_PPV_ARGS(&m_CommandAllocators[i])))) {
+            throw std::runtime_error("Failed to create command allocator");
+        }
     }
 
-    m_Device->CreateCommandList(
+    if (FAILED(m_Device->CreateCommandList(
         0,
         D3D12_COMMAND_LIST_TYPE_DIRECT,
         m_CommandAllocators[0].Get(),
         nullptr,
-        IID_PPV_ARGS(&m_CommandList));
+        IID_PPV_ARGS(&m_CommandList)))) {
+        throw std::runtime_error("Failed to create command list");
+    }
     
     m_CommandList->Close();
 }
 
 void GraphicsDevice::CreateFences() {
-    m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
+    if (FAILED(m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)))) {
+        throw std::runtime_error("Failed to create fence");
+    }
     m_FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     
     for (UINT i = 0; i < FrameCount; i++) {
