@@ -1,4 +1,4 @@
-# Henky3D
+# AURORA Engine
 Minimal PC Graphics Engine with DirectX 12
 
 ## Features
