@@ -8,8 +8,15 @@ set(ENGINE_SOURCES
     graphics/GraphicsDevice.h
     graphics/Renderer.cpp
     graphics/Renderer.h
+    graphics/ConstantBufferAllocator.cpp
+    graphics/ConstantBufferAllocator.h
+    graphics/ConstantBuffers.h
     ecs/Components.h
     ecs/ECSWorld.h
+    ecs/TransformSystem.cpp
+    ecs/TransformSystem.h
+    ecs/CullingSystem.cpp
+    ecs/CullingSystem.h
 )
 
 add_library(Henky3DEngine STATIC ${ENGINE_SOURCES})
