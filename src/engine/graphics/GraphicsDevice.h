@@ -26,7 +26,7 @@ struct DescriptorHandle {
 class GraphicsDevice {
 public:
     static constexpr UINT FrameCount = 2;
-    static constexpr DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    static constexpr DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     static constexpr DXGI_FORMAT DepthStencilFormat = DXGI_FORMAT_D32_FLOAT;
 
     GraphicsDevice(Window* window);
