@@ -1,7 +1,6 @@
 #include "CullingSystem.h"
-#include <DirectXMath.h>
-
-using namespace DirectX;
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Henky3D {
 
@@ -22,27 +21,21 @@ std::vector<entt::entity> CullingSystem::CullEntities(ECSWorld* world, const Fru
         }
 
         // Transform bounding box to world space
-        XMMATRIX worldMatrix = transform.GetMatrix();
-        XMFLOAT3 localCenter = boundingBox.GetCenter();
-        XMFLOAT3 localExtents = boundingBox.GetExtents();
+        glm::mat4 worldMatrix = transform.GetWorldMatrix();
+        glm::vec3 localCenter = boundingBox.GetCenter();
+        glm::vec3 localExtents = boundingBox.GetExtents();
 
         // Transform center
-        XMVECTOR centerVec = XMLoadFloat3(&localCenter);
-        centerVec = XMVector3Transform(centerVec, worldMatrix);
-        XMFLOAT3 worldCenter;
-        XMStoreFloat3(&worldCenter, centerVec);
+        glm::vec4 centerVec4 = worldMatrix * glm::vec4(localCenter, 1.0f);
+        glm::vec3 worldCenter = glm::vec3(centerVec4);
 
         // Transform extents (conservative approach: compute max scale from each axis)
-        float scaleX = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
-        float scaleY = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
-        float scaleZ = XMVectorGetX(XMVector3Length(worldMatrix.r[2]));
+        float scaleX = glm::length(glm::vec3(worldMatrix[0]));
+        float scaleY = glm::length(glm::vec3(worldMatrix[1]));
+        float scaleZ = glm::length(glm::vec3(worldMatrix[2]));
         float maxScale = std::max({scaleX, scaleY, scaleZ});
 
-        XMFLOAT3 worldExtents = {
-            localExtents.x * maxScale,
-            localExtents.y * maxScale,
-            localExtents.z * maxScale
-        };
+        glm::vec3 worldExtents = localExtents * maxScale;
 
         // Test against frustum
         if (frustum.TestBox(worldCenter, worldExtents)) {
