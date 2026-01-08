@@ -61,8 +61,7 @@ ComPtr<IDxcBlob> Renderer::LoadAndCompileShader(const wchar_t* filename, const w
     std::wstring shaderPath = GetShaderPath(filename);
     Microsoft::WRL::ComPtr<IDxcBlobEncoding> sourceBlob;
     if (FAILED(library->CreateBlobFromFile(shaderPath.c_str(), nullptr, &sourceBlob))) {
-        std::wstring error = L"Failed to load shader file: " + shaderPath;
-        throw std::runtime_error(std::string(error.begin(), error.end()));
+        throw std::runtime_error("Failed to load shader file");
     }
 
     // Compile shader
@@ -88,9 +87,7 @@ ComPtr<IDxcBlob> Renderer::LoadAndCompileShader(const wchar_t* filename, const w
     if (FAILED(status)) {
         Microsoft::WRL::ComPtr<IDxcBlobEncoding> errors;
         result->GetErrorBuffer(&errors);
-        std::string message = "DXC compile failed for ";
-        std::wstring wfilename(filename);
-        message.append(std::string(wfilename.begin(), wfilename.end()));
+        std::string message = "DXC compile failed";
         if (errors && errors->GetBufferPointer() && errors->GetBufferSize() > 0) {
             message.append(": ");
             message.append(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize());
