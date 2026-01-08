@@ -1,6 +1,5 @@
 #pragma once
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <GLFW/glfw3.h>
 #include <string>
 #include <functional>
 
@@ -16,14 +15,14 @@ public:
     bool ProcessMessages();
     void SetEventCallback(EventCallback callback) { m_EventCallback = callback; }
 
-    HWND GetHandle() const { return m_Handle; }
+    GLFWwindow* GetHandle() const { return m_Handle; }
     uint32_t GetWidth() const { return m_Width; }
     uint32_t GetHeight() const { return m_Height; }
 
-    static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 private:
-    HWND m_Handle;
+    static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+    
+    GLFWwindow* m_Handle;
     uint32_t m_Width;
     uint32_t m_Height;
     std::string m_Title;
