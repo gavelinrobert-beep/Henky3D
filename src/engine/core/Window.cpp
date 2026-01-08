@@ -1,7 +1,8 @@
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include "Window.h"
 #include "../input/Input.h"
 #include <stdexcept>
-#include <Windows.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
