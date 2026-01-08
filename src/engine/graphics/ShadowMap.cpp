@@ -1,5 +1,6 @@
-#include "ShadowMap.h"
+#include <d3d12.h>
 #include <d3dx12.h>
+#include "ShadowMap.h"
 #include <stdexcept>
 
 namespace Henky3D {
