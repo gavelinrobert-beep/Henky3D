@@ -6,9 +6,6 @@ namespace Henky3D {
 
 using namespace DirectX;
 
-// Forward declarations
-struct Frustum;
-
 struct Transform {
     XMFLOAT3 Position = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 Rotation = { 0.0f, 0.0f, 0.0f };
@@ -39,76 +36,6 @@ struct Transform {
 
     void MarkDirty() {
         Dirty = true;
-    }
-};
-
-struct Camera {
-    XMFLOAT3 Position = { 0.0f, 0.0f, -5.0f };
-    XMFLOAT3 Target = { 0.0f, 0.0f, 0.0f };
-    XMFLOAT3 Up = { 0.0f, 1.0f, 0.0f };
-    
-    float FOV = XM_PIDIV4;
-    float AspectRatio = 16.0f / 9.0f;
-    float NearPlane = 0.1f;
-    float FarPlane = 1000.0f;
-    
-    float Yaw = 0.0f;
-    float Pitch = 0.0f;
-    float MoveSpeed = 5.0f;
-    float LookSpeed = 0.002f;
-
-    XMMATRIX GetViewMatrix() const {
-        XMVECTOR pos = XMLoadFloat3(&Position);
-        XMVECTOR target = XMLoadFloat3(&Target);
-        XMVECTOR up = XMLoadFloat3(&Up);
-        return XMMatrixLookAtLH(pos, target, up);
-    }
-
-    XMMATRIX GetProjectionMatrix() const {
-        return XMMatrixPerspectiveFovLH(FOV, AspectRatio, NearPlane, FarPlane);
-    }
-
-    void UpdateTargetFromAngles() {
-        float x = cosf(Pitch) * sinf(Yaw);
-        float y = sinf(Pitch);
-        float z = cosf(Pitch) * cosf(Yaw);
-        
-        Target.x = Position.x + x;
-        Target.y = Position.y + y;
-        Target.z = Position.z + z;
-    }
-
-    Frustum GetFrustum() const {
-        Frustum frustum;
-        XMMATRIX vp = GetViewMatrix() * GetProjectionMatrix();
-        frustum.ExtractFromMatrix(vp);
-        return frustum;
-    }
-};
-
-struct Renderable {
-    bool Visible = true;
-    XMFLOAT4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
-};
-
-struct BoundingBox {
-    XMFLOAT3 Min = { -0.5f, -0.5f, -0.5f };
-    XMFLOAT3 Max = { 0.5f, 0.5f, 0.5f };
-
-    XMFLOAT3 GetCenter() const {
-        return XMFLOAT3(
-            (Min.x + Max.x) * 0.5f,
-            (Min.y + Max.y) * 0.5f,
-            (Min.z + Max.z) * 0.5f
-        );
-    }
-
-    XMFLOAT3 GetExtents() const {
-        return XMFLOAT3(
-            (Max.x - Min.x) * 0.5f,
-            (Max.y - Min.y) * 0.5f,
-            (Max.z - Min.z) * 0.5f
-        );
     }
 };
 
@@ -189,6 +116,76 @@ struct Frustum {
             }
         }
         return true;
+    }
+};
+
+struct Camera {
+    XMFLOAT3 Position = { 0.0f, 0.0f, -5.0f };
+    XMFLOAT3 Target = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 Up = { 0.0f, 1.0f, 0.0f };
+    
+    float FOV = XM_PIDIV4;
+    float AspectRatio = 16.0f / 9.0f;
+    float NearPlane = 0.1f;
+    float FarPlane = 1000.0f;
+    
+    float Yaw = 0.0f;
+    float Pitch = 0.0f;
+    float MoveSpeed = 5.0f;
+    float LookSpeed = 0.002f;
+
+    XMMATRIX GetViewMatrix() const {
+        XMVECTOR pos = XMLoadFloat3(&Position);
+        XMVECTOR target = XMLoadFloat3(&Target);
+        XMVECTOR up = XMLoadFloat3(&Up);
+        return XMMatrixLookAtLH(pos, target, up);
+    }
+
+    XMMATRIX GetProjectionMatrix() const {
+        return XMMatrixPerspectiveFovLH(FOV, AspectRatio, NearPlane, FarPlane);
+    }
+
+    void UpdateTargetFromAngles() {
+        float x = cosf(Pitch) * sinf(Yaw);
+        float y = sinf(Pitch);
+        float z = cosf(Pitch) * cosf(Yaw);
+        
+        Target.x = Position.x + x;
+        Target.y = Position.y + y;
+        Target.z = Position.z + z;
+    }
+
+    Frustum GetFrustum() const {
+        Frustum frustum;
+        XMMATRIX vp = GetViewMatrix() * GetProjectionMatrix();
+        frustum.ExtractFromMatrix(vp);
+        return frustum;
+    }
+};
+
+struct Renderable {
+    bool Visible = true;
+    XMFLOAT4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+};
+
+struct BoundingBox {
+    XMFLOAT3 Min = { -0.5f, -0.5f, -0.5f };
+    XMFLOAT3 Max = { 0.5f, 0.5f, 0.5f };
+
+    XMFLOAT3 GetCenter() const {
+        return XMFLOAT3(
+            (Min.x + Max.x) * 0.5f,
+            (Min.y + Max.y) * 0.5f,
+            (Min.z + Max.z) * 0.5f
+        );
+    }
+
+    XMFLOAT3 GetExtents() const {
+        return XMFLOAT3(
+            (Max.x - Min.x) * 0.5f,
+            (Max.y - Min.y) * 0.5f,
+            (Max.z - Min.z) * 0.5f
+        );
     }
 };
 
