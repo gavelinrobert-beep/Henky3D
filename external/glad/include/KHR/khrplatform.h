@@ -1,6 +1,9 @@
 #ifndef __khrplatform_h_
 #define __khrplatform_h_
 
+#include <stddef.h>
+#include <stdint.h>
+
 #if defined(_WIN32) && !defined(__SCITECH_SNAP__)
 #define KHRONOS_APICALL __declspec(dllimport)
 #define KHRONOS_APIENTRY __stdcall
@@ -8,8 +11,6 @@
 #define KHRONOS_APICALL
 #define KHRONOS_APIENTRY
 #endif
-
-#include <stdint.h>
 
 typedef int8_t khronos_int8_t;
 typedef uint8_t khronos_uint8_t;
