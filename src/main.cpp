@@ -10,9 +10,12 @@
 #include "engine/ecs/TransformSystem.h"
 #include "engine/ecs/CullingSystem.h"
 #include <imgui.h>
-#include <imgui_impl_win32.h>
-#include <imgui_impl_dx12.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <memory>
+#include <iostream>
 
 using namespace Henky3D;
 
@@ -36,8 +39,8 @@ public:
 
     ~Application() {
         m_Device->WaitForGPU();
-        ImGui_ImplDX12_Shutdown();
-        ImGui_ImplWin32_Shutdown();
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
     }
 
@@ -71,28 +74,8 @@ private:
 
         ImGui::StyleColorsDark();
 
-        // Get SRV descriptor heap
-        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        desc.NumDescriptors = 1;
-        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        
-        ID3D12DescriptorHeap* srvHeap = nullptr;
-        if (FAILED(m_Device->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvHeap)))) {
-            throw std::runtime_error("Failed to create ImGui descriptor heap");
-        }
-
-        ImGui_ImplWin32_Init(m_Window->GetHandle());
-        ImGui_ImplDX12_Init(
-            m_Device->GetDevice(),
-            GraphicsDevice::FrameCount,
-            GraphicsDevice::BackBufferFormat,
-            srvHeap,
-            srvHeap->GetCPUDescriptorHandleForHeapStart(),
-            srvHeap->GetGPUDescriptorHandleForHeapStart()
-        );
-        
-        m_ImGuiSRVHeap = srvHeap;
+        ImGui_ImplGlfw_InitForOpenGL(m_Window->GetHandle(), true);
+        ImGui_ImplOpenGL3_Init("#version 460 core");
     }
 
     void InitializeScene() {
@@ -172,30 +155,30 @@ private:
             camera.Pitch -= deltaY * camera.LookSpeed;
             
             // Clamp pitch
-            const float maxPitch = DirectX::XM_PIDIV2 - 0.01f;
+            const float maxPitch = glm::half_pi<float>() - 0.01f;
             if (camera.Pitch > maxPitch) camera.Pitch = maxPitch;
             if (camera.Pitch < -maxPitch) camera.Pitch = -maxPitch;
 
             // Movement
             float moveSpeed = camera.MoveSpeed * deltaTime;
-            DirectX::XMVECTOR forward = DirectX::XMVectorSet(
-                sinf(camera.Yaw), 0.0f, cosf(camera.Yaw), 0.0f
+            glm::vec3 forward = glm::vec3(
+                sinf(camera.Yaw), 0.0f, cosf(camera.Yaw)
             );
-            DirectX::XMVECTOR right = DirectX::XMVectorSet(
-                cosf(camera.Yaw), 0.0f, -sinf(camera.Yaw), 0.0f
+            glm::vec3 right = glm::vec3(
+                cosf(camera.Yaw), 0.0f, -sinf(camera.Yaw)
             );
-            DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+            glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
-            DirectX::XMVECTOR pos = DirectX::XMLoadFloat3(&camera.Position);
+            glm::vec3 pos = camera.Position;
 
-            if (Input::IsKeyDown('W')) pos = DirectX::XMVectorAdd(pos, DirectX::XMVectorScale(forward, moveSpeed));
-            if (Input::IsKeyDown('S')) pos = DirectX::XMVectorAdd(pos, DirectX::XMVectorScale(forward, -moveSpeed));
-            if (Input::IsKeyDown('A')) pos = DirectX::XMVectorAdd(pos, DirectX::XMVectorScale(right, -moveSpeed));
-            if (Input::IsKeyDown('D')) pos = DirectX::XMVectorAdd(pos, DirectX::XMVectorScale(right, moveSpeed));
-            if (Input::IsKeyDown('E')) pos = DirectX::XMVectorAdd(pos, DirectX::XMVectorScale(up, moveSpeed));
-            if (Input::IsKeyDown('Q')) pos = DirectX::XMVectorAdd(pos, DirectX::XMVectorScale(up, -moveSpeed));
+            if (Input::IsKeyDown('W')) pos += forward * moveSpeed;
+            if (Input::IsKeyDown('S')) pos -= forward * moveSpeed;
+            if (Input::IsKeyDown('A')) pos -= right * moveSpeed;
+            if (Input::IsKeyDown('D')) pos += right * moveSpeed;
+            if (Input::IsKeyDown('E')) pos += up * moveSpeed;
+            if (Input::IsKeyDown('Q')) pos -= up * moveSpeed;
 
-            DirectX::XMStoreFloat3(&camera.Position, pos);
+            camera.Position = pos;
             camera.UpdateTargetFromAngles();
         }
     }
@@ -204,32 +187,11 @@ private:
         m_Device->BeginFrame();
         m_Renderer->BeginFrame();
         
-        auto commandList = m_Device->GetCommandList();
-        
-        // Transition to render target with explicit state tracking
-        m_Device->TransitionBackBufferToRenderTarget(commandList);
-
         // Clear
-        auto rtv = m_Device->GetCurrentRTV();
-        auto dsv = m_Device->GetDSV();
-        const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
-        commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
-        commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-        // Set render targets
-        commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-
-        // Set viewport and scissor
-        D3D12_VIEWPORT viewport = {};
-        viewport.Width = static_cast<float>(m_Window->GetWidth());
-        viewport.Height = static_cast<float>(m_Window->GetHeight());
-        viewport.MaxDepth = 1.0f;
-        commandList->RSSetViewports(1, &viewport);
-
-        D3D12_RECT scissor = {};
-        scissor.right = m_Window->GetWidth();
-        scissor.bottom = m_Window->GetHeight();
-        commandList->RSSetScissorRects(1, &scissor);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // Set viewport
+        glViewport(0, 0, m_Window->GetWidth(), m_Window->GetHeight());
 
         // Setup per-frame constants
         if (m_ECS->HasComponent<Camera>(m_CameraEntity)) {
@@ -237,8 +199,8 @@ private:
             camera.AspectRatio = static_cast<float>(m_Window->GetWidth()) / static_cast<float>(m_Window->GetHeight());
 
             // Get directional light from scene
-            DirectX::XMFLOAT3 lightDirection = { 0.5f, -1.0f, 0.3f };
-            DirectX::XMFLOAT4 lightColor = { 1.0f, 1.0f, 0.9f, 1.0f };
+            glm::vec3 lightDirection = glm::vec3(0.5f, -1.0f, 0.3f);
+            glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 0.9f, 1.0f);
             auto lightView = m_ECS->GetRegistry().view<Light>();
             for (auto entity : lightView) {
                 auto& light = lightView.get<Light>(entity);
@@ -250,24 +212,23 @@ private:
             }
             
             // Compute light view-projection for shadows
-            // TODO: Compute scene bounds dynamically from actual geometry
-            DirectX::XMFLOAT3 sceneBoundsMin = { -5.0f, -5.0f, -5.0f };
-            DirectX::XMFLOAT3 sceneBoundsMax = { 5.0f, 5.0f, 5.0f };
-            DirectX::XMMATRIX lightViewProj = ShadowMap::ComputeLightViewProjection(
+            glm::vec3 sceneBoundsMin = glm::vec3(-5.0f, -5.0f, -5.0f);
+            glm::vec3 sceneBoundsMax = glm::vec3(5.0f, 5.0f, 5.0f);
+            glm::mat4 lightViewProj = ShadowMap::ComputeLightViewProjection(
                 lightDirection, sceneBoundsMin, sceneBoundsMax);
 
             PerFrameConstants perFrameConstants;
-            DirectX::XMMATRIX view = camera.GetViewMatrix();
-            DirectX::XMMATRIX projection = camera.GetProjectionMatrix();
+            glm::mat4 view = camera.GetViewMatrix();
+            glm::mat4 projection = camera.GetProjectionMatrix();
             
-            DirectX::XMStoreFloat4x4(&perFrameConstants.ViewMatrix, DirectX::XMMatrixTranspose(view));
-            DirectX::XMStoreFloat4x4(&perFrameConstants.ProjectionMatrix, DirectX::XMMatrixTranspose(projection));
-            DirectX::XMStoreFloat4x4(&perFrameConstants.ViewProjectionMatrix, DirectX::XMMatrixTranspose(view * projection));
-            DirectX::XMStoreFloat4x4(&perFrameConstants.LightViewProjectionMatrix, DirectX::XMMatrixTranspose(lightViewProj));
-            perFrameConstants.CameraPosition = DirectX::XMFLOAT4(camera.Position.x, camera.Position.y, camera.Position.z, 1.0f);
-            perFrameConstants.LightDirection = DirectX::XMFLOAT4(lightDirection.x, lightDirection.y, lightDirection.z, 0.0f);
+            perFrameConstants.ViewMatrix = view;
+            perFrameConstants.ProjectionMatrix = projection;
+            perFrameConstants.ViewProjectionMatrix = projection * view;
+            perFrameConstants.LightViewProjectionMatrix = lightViewProj;
+            perFrameConstants.CameraPosition = glm::vec4(camera.Position, 1.0f);
+            perFrameConstants.LightDirection = glm::vec4(lightDirection, 0.0f);
             perFrameConstants.LightColor = lightColor;
-            perFrameConstants.AmbientColor = DirectX::XMFLOAT4(0.2f, 0.2f, 0.25f, 1.0f);
+            perFrameConstants.AmbientColor = glm::vec4(0.2f, 0.2f, 0.25f, 1.0f);
             perFrameConstants.Time = m_TotalTime;
             perFrameConstants.DeltaTime = m_DeltaTime;
             perFrameConstants.ShadowBias = m_ShadowBias;
@@ -278,6 +239,9 @@ private:
             // Render shadow pass if enabled
             if (m_ShadowsEnabled) {
                 m_Renderer->RenderShadowPass(m_ECS.get());
+                
+                // Reset viewport after shadow pass
+                glViewport(0, 0, m_Window->GetWidth(), m_Window->GetHeight());
             }
 
             // Render scene
@@ -287,15 +251,12 @@ private:
         // Render ImGui
         RenderImGui(fpsCounter);
 
-        // Transition to present
-        m_Device->TransitionBackBufferToPresent(commandList);
-
         m_Device->EndFrame();
     }
 
     void RenderImGui(const FPSCounter& fpsCounter) {
-        ImGui_ImplDX12_NewFrame();
-        ImGui_ImplWin32_NewFrame();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         // Main overlay window
@@ -344,18 +305,13 @@ private:
         ImGui::End();
 
         ImGui::Render();
-        
-        auto commandList = m_Device->GetCommandList();
-        commandList->SetDescriptorHeaps(1, &m_ImGuiSRVHeap);
-        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
     void OnResize() {
         if (m_Device) {
             m_Device->WaitForGPU();
-            ImGui_ImplDX12_InvalidateDeviceObjects();
             m_Device->ResizeBuffers(m_Window->GetWidth(), m_Window->GetHeight());
-            ImGui_ImplDX12_CreateDeviceObjects();
         }
     }
 
@@ -363,8 +319,6 @@ private:
     std::unique_ptr<GraphicsDevice> m_Device;
     std::unique_ptr<Renderer> m_Renderer;
     std::unique_ptr<ECSWorld> m_ECS;
-    
-    ID3D12DescriptorHeap* m_ImGuiSRVHeap = nullptr;
     entt::entity m_CameraEntity;
     bool m_Running = true;
     bool m_CameraControlEnabled = false;
@@ -375,13 +329,13 @@ private:
     float m_DeltaTime = 0.0f;
 };
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int main(int argc, char** argv) {
     try {
         Application app;
         app.Run();
     }
     catch (const std::exception& e) {
-        MessageBoxA(nullptr, e.what(), "Error", MB_ICONERROR);
+        std::cerr << "Error: " << e.what() << std::endl;
         return -1;
     }
     return 0;
