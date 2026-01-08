@@ -1,13 +1,10 @@
 #pragma once
-#include <DirectXMath.h>
-#include <d3d12.h>
-#include <wrl/client.h>
+#include <glad/gl.h>
+#include <glm/glm.hpp>
 #include <string>
 #include <memory>
 
 namespace Henky3D {
-
-using namespace DirectX;
 
 // Handle for texture resources
 struct TextureHandle {
@@ -15,15 +12,13 @@ struct TextureHandle {
     bool IsValid() const { return Index != 0xFFFFFFFF; }
 };
 
-// Texture asset with DX12 resource and SRV
+// Texture asset with OpenGL texture
 struct TextureAsset {
     std::wstring Path;
-    Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
-    D3D12_CPU_DESCRIPTOR_HANDLE SRV{};
-    D3D12_GPU_DESCRIPTOR_HANDLE SRVGPU{};
+    GLuint Texture = 0;
     uint32_t Width = 0;
     uint32_t Height = 0;
-    DXGI_FORMAT Format = DXGI_FORMAT_UNKNOWN;
+    GLenum Format = GL_RGBA8;
     bool IsDefault = false; // True for fallback textures
 };
 
@@ -32,7 +27,7 @@ struct MaterialAsset {
     std::string Name = "Unnamed";
     
     // Base color
-    XMFLOAT4 BaseColorFactor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glm::vec4 BaseColorFactor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     TextureHandle BaseColorTexture;
     
     // Normal mapping

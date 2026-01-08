@@ -1,20 +1,19 @@
 #pragma once
-#include <DirectXMath.h>
+#include <glm/glm.hpp>
+#include <cstdint>
 
 namespace Henky3D {
 
-using namespace DirectX;
-
 // Per-frame constants updated once per frame
-struct alignas(256) PerFrameConstants {
-    XMFLOAT4X4 ViewMatrix;
-    XMFLOAT4X4 ProjectionMatrix;
-    XMFLOAT4X4 ViewProjectionMatrix;
-    XMFLOAT4X4 LightViewProjectionMatrix;
-    XMFLOAT4 CameraPosition;
-    XMFLOAT4 LightDirection;  // w component unused
-    XMFLOAT4 LightColor;      // rgb = color, a = intensity
-    XMFLOAT4 AmbientColor;    // rgb = color, a = intensity
+struct alignas(16) PerFrameConstants {
+    glm::mat4 ViewMatrix;
+    glm::mat4 ProjectionMatrix;
+    glm::mat4 ViewProjectionMatrix;
+    glm::mat4 LightViewProjectionMatrix;
+    glm::vec4 CameraPosition;
+    glm::vec4 LightDirection;  // w component unused
+    glm::vec4 LightColor;      // rgb = color, a = intensity
+    glm::vec4 AmbientColor;    // rgb = color, a = intensity
     float Time;
     float DeltaTime;
     float ShadowBias;
@@ -22,10 +21,10 @@ struct alignas(256) PerFrameConstants {
 };
 
 // Per-draw constants updated for each draw call
-struct alignas(256) PerDrawConstants {
-    XMFLOAT4X4 WorldMatrix;
-    UINT MaterialIndex;
-    UINT Padding[3];
+struct alignas(16) PerDrawConstants {
+    glm::mat4 WorldMatrix;
+    uint32_t MaterialIndex;
+    uint32_t Padding[3];
 };
 
 } // namespace Henky3D

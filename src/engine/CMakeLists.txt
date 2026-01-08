@@ -8,8 +8,6 @@ set(ENGINE_SOURCES
     graphics/GraphicsDevice.h
     graphics/Renderer.cpp
     graphics/Renderer.h
-    graphics/ConstantBufferAllocator.cpp
-    graphics/ConstantBufferAllocator.h
     graphics/ConstantBuffers.h
     graphics/Material.h
     graphics/AssetRegistry.cpp
