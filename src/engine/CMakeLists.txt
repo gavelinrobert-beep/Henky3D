@@ -33,12 +33,12 @@ target_include_directories(Henky3DEngine PUBLIC
 )
 
 target_link_libraries(Henky3DEngine PUBLIC
-    dx12_helpers
+    glad
+    glfw
+    glm::glm
     entt
     imgui
-    d3d12.lib
-    dxgi.lib
-    dxcompiler.lib
+    OpenGL::GL
 )
 
 target_compile_features(Henky3DEngine PUBLIC cxx_std_20)
