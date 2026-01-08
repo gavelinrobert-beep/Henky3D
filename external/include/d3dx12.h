@@ -150,7 +150,7 @@ inline UINT64 UpdateSubresourcesHelper(
     D3D12_RESOURCE_DESC DestinationDesc = pDestinationResource->GetDesc();
     if (IntermediateDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER ||
         IntermediateDesc.Width < RequiredSize + pLayouts[0].Offset ||
-        RequiredSize > SIZE_T(-1) ||
+        RequiredSize > static_cast<UINT64>(SIZE_MAX) ||
         (DestinationDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER &&
             (FirstSubresource != 0 || NumSubresources != 1)))
     {
@@ -166,7 +166,7 @@ inline UINT64 UpdateSubresourcesHelper(
 
     for (UINT i = 0; i < NumSubresources; ++i)
     {
-        if (pRowSizesInBytes[i] > SIZE_T(-1)) return 0;
+        if (pRowSizesInBytes[i] > static_cast<UINT64>(SIZE_MAX)) return 0;
         D3D12_MEMCPY_DEST DestData = { pData + pLayouts[i].Offset, pLayouts[i].Footprint.RowPitch, SIZE_T(pLayouts[i].Footprint.RowPitch) * SIZE_T(pNumRows[i]) };
         MemcpySubresource(&DestData, &pSrcData[i], static_cast<SIZE_T>(pRowSizesInBytes[i]), pNumRows[i], pLayouts[i].Footprint.Depth);
     }
