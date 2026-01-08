@@ -109,7 +109,7 @@ inline UINT64 UpdateSubresources(
 {
     UINT64 RequiredSize = 0;
     UINT64 MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64)) * NumSubresources;
-    if (MemToAlloc > SIZE_MAX)
+    if (MemToAlloc > static_cast<UINT64>(SIZE_MAX))
     {
         return 0;
     }
