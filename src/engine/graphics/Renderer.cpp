@@ -11,6 +11,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
 #else
 #include <unistd.h>
 #include <limits.h>
@@ -24,8 +26,14 @@ static std::string GetExecutableDirectory() {
 #ifdef _WIN32
     char path[MAX_PATH];
     DWORD len = GetModuleFileNameA(nullptr, path, MAX_PATH);
-    if (len > 0) {
+    if (len > 0 && len < MAX_PATH) {
         exePath = std::string(path, len);
+    }
+#elif defined(__APPLE__)
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        exePath = std::string(path);
     }
 #else
     char path[PATH_MAX];
@@ -65,7 +73,12 @@ static std::string GetShaderPath(const char* filename) {
         // Try ../shaders/ (one level up from exe)
         path = fs::path(exeDir) / ".." / "shaders" / filename;
         if (fs::exists(path)) {
-            return fs::canonical(path).string();
+            try {
+                return fs::canonical(path).string();
+            } catch (...) {
+                // If canonicalization fails, use the path as-is
+                return path.string();
+            }
         }
     }
     
