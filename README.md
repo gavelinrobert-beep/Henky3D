@@ -39,6 +39,23 @@ build/bin/Release/Henky3D.exe   # Windows
 ./build/bin/Henky3D             # Linux/macOS development
 ```
 
+**Note**: The engine loads shaders from the `shaders/` directory relative to the executable. The shader loader searches in this order:
+1. `$HENKY_ASSET_DIR/shaders/` (if the `HENKY_ASSET_DIR` environment variable is set)
+2. `<exe_dir>/shaders/` (directory next to the executable)
+3. `<exe_dir>/../shaders/` (one level up from the executable)
+4. `../../../shaders/` (fallback for build directory structure)
+
+To use a custom asset location, set the `HENKY_ASSET_DIR` environment variable:
+```bash
+# Windows
+set HENKY_ASSET_DIR=C:\path\to\assets
+build\bin\Release\Henky3D.exe
+
+# Linux/macOS
+export HENKY_ASSET_DIR=/path/to/assets
+./build/bin/Henky3D
+```
+
 ## Controls
 1. Toggle **Enable Camera Control** in ImGui.
 2. **WASD**: Move camera; **Q/E**: Down/Up.
