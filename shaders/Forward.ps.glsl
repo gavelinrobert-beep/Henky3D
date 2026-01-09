@@ -12,22 +12,22 @@ in vec4 vShadowPos;
 
 out vec4 FragColor;
 
-float SampleShadowMapPCF(vec3 shadowPos) {
+float SampleShadowMapPCF(vec4 shadowPos) {
     // Perspective divide
-    shadowPos.xy /= shadowPos.w;
+    vec3 projCoords = shadowPos.xyz / shadowPos.w;
     
     // Transform to [0,1] range
-    shadowPos.xy = shadowPos.xy * 0.5 + 0.5;
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
     
     // Check if in shadow map bounds
-    if (shadowPos.x < 0.0 || shadowPos.x > 1.0 || 
-        shadowPos.y < 0.0 || shadowPos.y > 1.0 ||
-        shadowPos.z < 0.0 || shadowPos.z > 1.0) {
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || 
+        projCoords.y < 0.0 || projCoords.y > 1.0 ||
+        projCoords.z < 0.0 || projCoords.z > 1.0) {
         return 1.0; // Not in shadow if outside bounds
     }
     
     // Apply bias
-    float depth = shadowPos.z - ShadowBias;
+    float depth = projCoords.z - ShadowBias;
     
     // Simple PCF (9 samples)
     vec2 texelSize = 1.0 / vec2(2048.0, 2048.0); // TODO: make configurable
@@ -36,7 +36,7 @@ float SampleShadowMapPCF(vec3 shadowPos) {
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             vec2 offset = vec2(x, y) * texelSize;
-            shadow += texture(uShadowMap, vec3(shadowPos.xy + offset, depth));
+            shadow += texture(uShadowMap, vec3(projCoords.xy + offset, depth));
         }
     }
     
@@ -69,7 +69,7 @@ void main() {
     // Shadow
     float shadowFactor = 1.0;
     if (ShadowsEnabled > 0.5) {
-        shadowFactor = SampleShadowMapPCF(vShadowPos.xyz);
+        shadowFactor = SampleShadowMapPCF(vShadowPos);
     }
     
     // Combine lighting

@@ -6,12 +6,76 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <filesystem>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <limits.h>
+#endif
 
 namespace Henky3D {
 
+static std::string GetExecutableDirectory() {
+    std::string exePath;
+    
+#ifdef _WIN32
+    char path[MAX_PATH];
+    DWORD len = GetModuleFileNameA(nullptr, path, MAX_PATH);
+    if (len > 0) {
+        exePath = std::string(path, len);
+    }
+#else
+    char path[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+    if (len != -1) {
+        path[len] = '\0';
+        exePath = std::string(path);
+    }
+#endif
+    
+    if (!exePath.empty()) {
+        return std::filesystem::path(exePath).parent_path().string();
+    }
+    return "";
+}
+
 static std::string GetShaderPath(const char* filename) {
-    // Shaders are in the shaders/ directory relative to executable
-    // For now, use relative path from build directory
+    namespace fs = std::filesystem;
+    
+    // Priority 1: HENKY_ASSET_DIR environment variable
+    if (const char* assetDir = std::getenv("HENKY_ASSET_DIR")) {
+        fs::path path = fs::path(assetDir) / "shaders" / filename;
+        if (fs::exists(path)) {
+            return path.string();
+        }
+    }
+    
+    // Priority 2: Relative to executable directory
+    std::string exeDir = GetExecutableDirectory();
+    if (!exeDir.empty()) {
+        // Try shaders/ subdirectory relative to exe
+        fs::path path = fs::path(exeDir) / "shaders" / filename;
+        if (fs::exists(path)) {
+            return path.string();
+        }
+        
+        // Try ../shaders/ (one level up from exe)
+        path = fs::path(exeDir) / ".." / "shaders" / filename;
+        if (fs::exists(path)) {
+            return fs::canonical(path).string();
+        }
+    }
+    
+    // Priority 3: Fallback to original relative path from build directory
+    fs::path fallbackPath = fs::path("../../../shaders/") / filename;
+    if (fs::exists(fallbackPath)) {
+        return fallbackPath.string();
+    }
+    
+    // If nothing worked, return the relative path and let it fail with a clear error
     return std::string("../../../shaders/") + filename;
 }
 

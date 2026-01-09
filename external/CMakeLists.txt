@@ -19,7 +19,7 @@ if (NOT EXISTS "${ENTT_DIR}/single_include/entt/entt.hpp")
         GIT_TAG v3.13.2
         GIT_SHALLOW TRUE
     )
-    FetchContent_Populate(entt_content)
+    FetchContent_MakeAvailable(entt_content)
     set(ENTT_DIR ${entt_content_SOURCE_DIR})
 endif()
 
@@ -38,7 +38,7 @@ if (NOT EXISTS "${IMGUI_DIR}/imgui.cpp")
         GIT_TAG v1.91.5
         GIT_SHALLOW TRUE
     )
-    FetchContent_Populate(imgui_content)
+    FetchContent_MakeAvailable(imgui_content)
     set(IMGUI_DIR ${imgui_content_SOURCE_DIR})
 endif()
 
