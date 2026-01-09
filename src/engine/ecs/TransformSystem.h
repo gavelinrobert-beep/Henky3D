@@ -10,7 +10,7 @@ public:
     static void UpdateTransforms(ECSWorld* world);
 
 private:
-    static void UpdateTransformRecursive(ECSWorld* world, entt::entity entity, const DirectX::XMMATRIX& parentWorld);
+    static void UpdateTransformRecursive(ECSWorld* world, entt::entity entity, const glm::mat4& parentWorld);
 };
 
 } // namespace Henky3D

@@ -31,9 +31,8 @@ public:
 
 private:
     TextureHandle CreateDefaultTexture(const std::string& name, uint32_t width, uint32_t height, 
-                                       const uint8_t* data, DXGI_FORMAT format);
-    TextureHandle LoadTextureWIC(const std::wstring& path);
-    TextureHandle LoadTextureDDS(const std::wstring& path);
+                                       const uint8_t* data, GLenum format);
+    TextureHandle LoadTextureSTB(const std::wstring& path);
     
     GraphicsDevice* m_Device;
     

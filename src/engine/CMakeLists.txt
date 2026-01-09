@@ -8,8 +8,6 @@ set(ENGINE_SOURCES
     graphics/GraphicsDevice.h
     graphics/Renderer.cpp
     graphics/Renderer.h
-    graphics/ConstantBufferAllocator.cpp
-    graphics/ConstantBufferAllocator.h
     graphics/ConstantBuffers.h
     graphics/Material.h
     graphics/AssetRegistry.cpp
@@ -33,12 +31,12 @@ target_include_directories(Henky3DEngine PUBLIC
 )
 
 target_link_libraries(Henky3DEngine PUBLIC
-    dx12_helpers
+    glad
+    glfw
+    glm::glm
     entt
     imgui
-    d3d12.lib
-    dxgi.lib
-    dxcompiler.lib
+    OpenGL::GL
 )
 
 target_compile_features(Henky3DEngine PUBLIC cxx_std_20)

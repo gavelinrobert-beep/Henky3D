@@ -10,13 +10,33 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Find DirectX 12
-if(WIN32)
-    find_package(directx-headers CONFIG)
-    if(NOT directx-headers_FOUND)
-        message(STATUS "DirectX headers will be linked from Windows SDK")
-    endif()
-endif()
+# Fetch GLFW
+include(FetchContent)
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG 3.4
+    GIT_SHALLOW TRUE
+)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(glfw)
+
+# Fetch GLM for math
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 1.0.1
+    GIT_SHALLOW TRUE
+)
+set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(glm)
+
+# Find OpenGL
+find_package(OpenGL REQUIRED)
 
 # Add external dependencies
 add_subdirectory(external)

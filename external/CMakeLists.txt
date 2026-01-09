@@ -1,8 +1,12 @@
 # External dependencies
 
-# DirectX helpers (d3dx12.h)
-add_library(dx12_helpers INTERFACE)
-target_include_directories(dx12_helpers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# GLAD - OpenGL Function Loader
+add_library(glad STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/glad/src/gl.c
+)
+target_include_directories(glad PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/glad/include
+)
 
 # EnTT - Header-only ECS library
 add_library(entt INTERFACE)
@@ -16,11 +20,12 @@ add_library(imgui STATIC
     ${IMGUI_DIR}/imgui_draw.cpp
     ${IMGUI_DIR}/imgui_tables.cpp
     ${IMGUI_DIR}/imgui_widgets.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_win32.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_dx12.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui PUBLIC 
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
 )
+target_link_libraries(imgui PUBLIC glfw glad)
 target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)

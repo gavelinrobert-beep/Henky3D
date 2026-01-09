@@ -1,26 +1,22 @@
 #pragma once
 #include "GraphicsDevice.h"
-#include "ConstantBufferAllocator.h"
 #include "ConstantBuffers.h"
 #include "AssetRegistry.h"
 #include "ShadowMap.h"
-#include <d3d12.h>
-#include <dxcapi.h>
-#include <wrl/client.h>
+#include <glad/gl.h>
+#include <glm/glm.hpp>
 #include <vector>
 #include <memory>
-#include <DirectXMath.h>
-
-using Microsoft::WRL::ComPtr;
+#include <string>
 
 namespace Henky3D {
 
 class ECSWorld;
 
 struct Vertex {
-    DirectX::XMFLOAT3 Position;
-    DirectX::XMFLOAT3 Normal;
-    DirectX::XMFLOAT4 Color;
+    glm::vec3 Position;
+    glm::vec3 Normal;
+    glm::vec4 Color;
 };
 
 struct RenderStats {
@@ -36,7 +32,7 @@ public:
 
     void BeginFrame();
     void SetPerFrameConstants(const PerFrameConstants& constants);
-    void DrawCube(const DirectX::XMMATRIX& worldMatrix, const DirectX::XMFLOAT4& color);
+    void DrawCube(const glm::mat4& worldMatrix, const glm::vec4& color);
     void RenderScene(ECSWorld* world, bool enableDepthPrepass, bool enableShadows);
     void RenderShadowPass(ECSWorld* world);
 
@@ -51,42 +47,36 @@ public:
     ShadowMap* GetShadowMap() { return m_ShadowMap.get(); }
 
 private:
-    void CreateRootSignature();
-    void CreateShadowRootSignature();
-    void CreateDepthPrepassPipeline();
-    void CreateForwardPipeline();
-    void CreateShadowPipeline();
+    void CreateShaderPrograms();
     void CreateCubeGeometry();
-    void CreateSamplers();
-    ComPtr<IDxcBlob> LoadAndCompileShader(const wchar_t* filename, const wchar_t* entryPoint, const wchar_t* target);
+    GLuint LoadAndCompileShader(const char* filename, GLenum shaderType);
+    GLuint CreateShaderProgram(const char* vsFile, const char* fsFile);
+    std::string LoadShaderSource(const char* filename);
 
     GraphicsDevice* m_Device;
-    std::unique_ptr<ConstantBufferAllocator> m_CBAllocator;
     std::unique_ptr<AssetRegistry> m_AssetRegistry;
     std::unique_ptr<ShadowMap> m_ShadowMap;
     
-    ComPtr<ID3D12RootSignature> m_RootSignature;
-    ComPtr<ID3D12RootSignature> m_ShadowRootSignature;
-    ComPtr<ID3D12PipelineState> m_DepthPrepassPSO;
-    ComPtr<ID3D12PipelineState> m_ForwardPSO;
-    ComPtr<ID3D12PipelineState> m_ForwardNoPrepassPSO;
-    ComPtr<ID3D12PipelineState> m_ShadowPSO;
+    // Shader programs
+    GLuint m_ForwardProgram;
+    GLuint m_DepthPrepassProgram;
+    GLuint m_ShadowProgram;
     
-    ComPtr<ID3D12Resource> m_VertexBuffer;
-    ComPtr<ID3D12Resource> m_IndexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
-    D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
-    UINT m_IndexCount;
-
-    D3D12_GPU_VIRTUAL_ADDRESS m_PerFrameCBAddress;
+    // Cube geometry
+    GLuint m_CubeVAO;
+    GLuint m_CubeVBO;
+    GLuint m_CubeIBO;
+    GLuint m_IndexCount;
+    
+    // Uniform buffers
+    GLuint m_PerFrameUBO;
+    GLuint m_PerDrawUBO;
+    
+    PerFrameConstants m_PerFrameConstants;
     bool m_DepthPrepassEnabled;
     bool m_ShadowsEnabled;
     
     RenderStats m_Stats;
-    
-    // Samplers
-    ComPtr<ID3D12DescriptorHeap> m_SamplerHeap;
-    D3D12_GPU_DESCRIPTOR_HANDLE m_ShadowSamplerGPU;
 };
 
 } // namespace Henky3D

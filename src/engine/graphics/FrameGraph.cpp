@@ -1,5 +1,4 @@
 #include "FrameGraph.h"
-#include <algorithm>
 
 namespace Henky3D {
 
@@ -10,7 +9,7 @@ FrameGraph::FrameGraph(GraphicsDevice* device)
 FrameGraph::~FrameGraph() {
 }
 
-void FrameGraph::AddPass(const std::string& name, std::function<void(ID3D12GraphicsCommandList*)> execute) {
+void FrameGraph::AddPass(const std::string& name, std::function<void()> execute) {
     RenderPass pass;
     pass.Name = name;
     pass.Execute = execute;
@@ -19,25 +18,27 @@ void FrameGraph::AddPass(const std::string& name, std::function<void(ID3D12Graph
 }
 
 void FrameGraph::SetPassEnabled(const std::string& name, bool enabled) {
-    auto it = std::find_if(m_Passes.begin(), m_Passes.end(),
-        [&name](const RenderPass& pass) { return pass.Name == name; });
-    
-    if (it != m_Passes.end()) {
-        it->Enabled = enabled;
+    for (auto& pass : m_Passes) {
+        if (pass.Name == name) {
+            pass.Enabled = enabled;
+            return;
+        }
     }
 }
 
 bool FrameGraph::IsPassEnabled(const std::string& name) const {
-    auto it = std::find_if(m_Passes.begin(), m_Passes.end(),
-        [&name](const RenderPass& pass) { return pass.Name == name; });
-    
-    return it != m_Passes.end() && it->Enabled;
+    for (const auto& pass : m_Passes) {
+        if (pass.Name == name) {
+            return pass.Enabled;
+        }
+    }
+    return false;
 }
 
-void FrameGraph::Execute(ID3D12GraphicsCommandList* commandList) {
+void FrameGraph::Execute() {
     for (const auto& pass : m_Passes) {
         if (pass.Enabled && pass.Execute) {
-            pass.Execute(commandList);
+            pass.Execute();
         }
     }
 }
@@ -47,8 +48,13 @@ void FrameGraph::Clear() {
 }
 
 size_t FrameGraph::GetEnabledPassCount() const {
-    return std::count_if(m_Passes.begin(), m_Passes.end(),
-        [](const RenderPass& pass) { return pass.Enabled; });
+    size_t count = 0;
+    for (const auto& pass : m_Passes) {
+        if (pass.Enabled) {
+            count++;
+        }
+    }
+    return count;
 }
 
 } // namespace Henky3D

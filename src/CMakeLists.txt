@@ -1,4 +1,4 @@
-add_executable(Henky3D WIN32 main.cpp)
+add_executable(Henky3D main.cpp)
 
 target_link_libraries(Henky3D PRIVATE
     Henky3DEngine

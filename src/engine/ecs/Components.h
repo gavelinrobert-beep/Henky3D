@@ -1,37 +1,34 @@
 #pragma once
-#include <DirectXMath.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 #include <entt/entt.hpp>
 
 namespace Henky3D {
 
-using namespace DirectX;
-
 struct Transform {
-    XMFLOAT3 Position = { 0.0f, 0.0f, 0.0f };
-    XMFLOAT3 Rotation = { 0.0f, 0.0f, 0.0f };
-    XMFLOAT3 Scale = { 1.0f, 1.0f, 1.0f };
+    glm::vec3 Position = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 Rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 Scale = glm::vec3(1.0f, 1.0f, 1.0f);
 
     // Hierarchy support
     entt::entity Parent = entt::null;
     
     // Cached world matrix and dirty flag
-    mutable XMFLOAT4X4 WorldMatrix = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
+    mutable glm::mat4 WorldMatrix = glm::mat4(1.0f);
     mutable bool Dirty = true;
 
-    XMMATRIX GetLocalMatrix() const {
-        XMMATRIX translation = XMMatrixTranslation(Position.x, Position.y, Position.z);
-        XMMATRIX rotation = XMMatrixRotationRollPitchYaw(Rotation.x, Rotation.y, Rotation.z);
-        XMMATRIX scale = XMMatrixScaling(Scale.x, Scale.y, Scale.z);
-        return scale * rotation * translation;
+    glm::mat4 GetLocalMatrix() const {
+        glm::mat4 translation = glm::translate(glm::mat4(1.0f), Position);
+        glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), Rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        rotation = glm::rotate(rotation, Rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        rotation = glm::rotate(rotation, Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 scale = glm::scale(glm::mat4(1.0f), Scale);
+        return translation * rotation * scale;
     }
 
-    XMMATRIX GetMatrix() const {
-        return XMLoadFloat4x4(&WorldMatrix);
+    glm::mat4 GetWorldMatrix() const {
+        return WorldMatrix;
     }
 
     void MarkDirty() {
@@ -40,75 +37,72 @@ struct Transform {
 };
 
 struct Frustum {
-    XMFLOAT4 Planes[6]; // Left, Right, Bottom, Top, Near, Far
+    glm::vec4 Planes[6]; // Left, Right, Bottom, Top, Near, Far
     
-    void ExtractFromMatrix(const XMMATRIX& viewProjection) {
-        XMFLOAT4X4 vp;
-        XMStoreFloat4x4(&vp, viewProjection);
-        
+    void ExtractFromMatrix(const glm::mat4& viewProjection) {
         // Left plane
-        Planes[0].x = vp._14 + vp._11;
-        Planes[0].y = vp._24 + vp._21;
-        Planes[0].z = vp._34 + vp._31;
-        Planes[0].w = vp._44 + vp._41;
+        Planes[0] = glm::vec4(
+            viewProjection[0][3] + viewProjection[0][0],
+            viewProjection[1][3] + viewProjection[1][0],
+            viewProjection[2][3] + viewProjection[2][0],
+            viewProjection[3][3] + viewProjection[3][0]
+        );
         
         // Right plane
-        Planes[1].x = vp._14 - vp._11;
-        Planes[1].y = vp._24 - vp._21;
-        Planes[1].z = vp._34 - vp._31;
-        Planes[1].w = vp._44 - vp._41;
+        Planes[1] = glm::vec4(
+            viewProjection[0][3] - viewProjection[0][0],
+            viewProjection[1][3] - viewProjection[1][0],
+            viewProjection[2][3] - viewProjection[2][0],
+            viewProjection[3][3] - viewProjection[3][0]
+        );
         
         // Bottom plane
-        Planes[2].x = vp._14 + vp._12;
-        Planes[2].y = vp._24 + vp._22;
-        Planes[2].z = vp._34 + vp._32;
-        Planes[2].w = vp._44 + vp._42;
+        Planes[2] = glm::vec4(
+            viewProjection[0][3] + viewProjection[0][1],
+            viewProjection[1][3] + viewProjection[1][1],
+            viewProjection[2][3] + viewProjection[2][1],
+            viewProjection[3][3] + viewProjection[3][1]
+        );
         
         // Top plane
-        Planes[3].x = vp._14 - vp._12;
-        Planes[3].y = vp._24 - vp._22;
-        Planes[3].z = vp._34 - vp._32;
-        Planes[3].w = vp._44 - vp._42;
+        Planes[3] = glm::vec4(
+            viewProjection[0][3] - viewProjection[0][1],
+            viewProjection[1][3] - viewProjection[1][1],
+            viewProjection[2][3] - viewProjection[2][1],
+            viewProjection[3][3] - viewProjection[3][1]
+        );
         
         // Near plane
-        Planes[4].x = vp._13;
-        Planes[4].y = vp._23;
-        Planes[4].z = vp._33;
-        Planes[4].w = vp._43;
+        Planes[4] = glm::vec4(
+            viewProjection[0][2],
+            viewProjection[1][2],
+            viewProjection[2][2],
+            viewProjection[3][2]
+        );
         
         // Far plane
-        Planes[5].x = vp._14 - vp._13;
-        Planes[5].y = vp._24 - vp._23;
-        Planes[5].z = vp._34 - vp._33;
-        Planes[5].w = vp._44 - vp._43;
+        Planes[5] = glm::vec4(
+            viewProjection[0][3] - viewProjection[0][2],
+            viewProjection[1][3] - viewProjection[1][2],
+            viewProjection[2][3] - viewProjection[2][2],
+            viewProjection[3][3] - viewProjection[3][2]
+        );
         
         // Normalize planes
         for (int i = 0; i < 6; i++) {
-            XMVECTOR plane = XMLoadFloat4(&Planes[i]);
-            plane = XMPlaneNormalize(plane);
-            XMStoreFloat4(&Planes[i], plane);
+            float length = glm::length(glm::vec3(Planes[i]));
+            Planes[i] /= length;
         }
     }
     
-    bool TestBox(const XMFLOAT3& center, const XMFLOAT3& extents) const {
+    bool TestBox(const glm::vec3& center, const glm::vec3& extents) const {
         for (int i = 0; i < 6; i++) {
-            XMVECTOR plane = XMLoadFloat4(&Planes[i]);
-            XMVECTOR centerVec = XMLoadFloat3(&center);
-            XMVECTOR extentsVec = XMLoadFloat3(&extents);
-            
-            // Compute positive extents along plane normal
-            XMVECTOR planeNormal = XMVectorSet(
-                XMVectorGetX(plane),
-                XMVectorGetY(plane),
-                XMVectorGetZ(plane),
-                0.0f
-            );
-            
-            XMVECTOR absPlaneNormal = XMVectorAbs(planeNormal);
-            float r = XMVectorGetX(XMVector3Dot(extentsVec, absPlaneNormal));
+            glm::vec3 planeNormal = glm::vec3(Planes[i]);
+            glm::vec3 absPlaneNormal = glm::abs(planeNormal);
+            float r = glm::dot(extents, absPlaneNormal);
             
             // Compute distance from center to plane
-            float d = XMVectorGetX(XMPlaneDotCoord(plane, centerVec));
+            float d = glm::dot(glm::vec3(Planes[i]), center) + Planes[i].w;
             
             // If box is completely outside this plane, it's not visible
             if (d < -r) {
@@ -120,11 +114,11 @@ struct Frustum {
 };
 
 struct Camera {
-    XMFLOAT3 Position = { 0.0f, 0.0f, -5.0f };
-    XMFLOAT3 Target = { 0.0f, 0.0f, 0.0f };
-    XMFLOAT3 Up = { 0.0f, 1.0f, 0.0f };
+    glm::vec3 Position = glm::vec3(0.0f, 0.0f, -5.0f);
+    glm::vec3 Target = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
     
-    float FOV = XM_PIDIV4;
+    float FOV = glm::pi<float>() / 4.0f;
     float AspectRatio = 16.0f / 9.0f;
     float NearPlane = 0.1f;
     float FarPlane = 1000.0f;
@@ -134,15 +128,12 @@ struct Camera {
     float MoveSpeed = 5.0f;
     float LookSpeed = 0.002f;
 
-    XMMATRIX GetViewMatrix() const {
-        XMVECTOR pos = XMLoadFloat3(&Position);
-        XMVECTOR target = XMLoadFloat3(&Target);
-        XMVECTOR up = XMLoadFloat3(&Up);
-        return XMMatrixLookAtLH(pos, target, up);
+    glm::mat4 GetViewMatrix() const {
+        return glm::lookAt(Position, Target, Up);
     }
 
-    XMMATRIX GetProjectionMatrix() const {
-        return XMMatrixPerspectiveFovLH(FOV, AspectRatio, NearPlane, FarPlane);
+    glm::mat4 GetProjectionMatrix() const {
+        return glm::perspective(FOV, AspectRatio, NearPlane, FarPlane);
     }
 
     void UpdateTargetFromAngles() {
@@ -150,14 +141,12 @@ struct Camera {
         float y = sinf(Pitch);
         float z = cosf(Pitch) * cosf(Yaw);
         
-        Target.x = Position.x + x;
-        Target.y = Position.y + y;
-        Target.z = Position.z + z;
+        Target = Position + glm::vec3(x, y, z);
     }
 
     Frustum GetFrustum() const {
         Frustum frustum;
-        XMMATRIX vp = GetViewMatrix() * GetProjectionMatrix();
+        glm::mat4 vp = GetProjectionMatrix() * GetViewMatrix();
         frustum.ExtractFromMatrix(vp);
         return frustum;
     }
@@ -165,27 +154,19 @@ struct Camera {
 
 struct Renderable {
     bool Visible = true;
-    XMFLOAT4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glm::vec4 Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
 struct BoundingBox {
-    XMFLOAT3 Min = { -0.5f, -0.5f, -0.5f };
-    XMFLOAT3 Max = { 0.5f, 0.5f, 0.5f };
+    glm::vec3 Min = glm::vec3(-0.5f, -0.5f, -0.5f);
+    glm::vec3 Max = glm::vec3(0.5f, 0.5f, 0.5f);
 
-    XMFLOAT3 GetCenter() const {
-        return XMFLOAT3(
-            (Min.x + Max.x) * 0.5f,
-            (Min.y + Max.y) * 0.5f,
-            (Min.z + Max.z) * 0.5f
-        );
+    glm::vec3 GetCenter() const {
+        return (Min + Max) * 0.5f;
     }
 
-    XMFLOAT3 GetExtents() const {
-        return XMFLOAT3(
-            (Max.x - Min.x) * 0.5f,
-            (Max.y - Min.y) * 0.5f,
-            (Max.z - Min.z) * 0.5f
-        );
+    glm::vec3 GetExtents() const {
+        return (Max - Min) * 0.5f;
     }
 };
 
@@ -197,9 +178,9 @@ struct Light {
     };
 
     Type LightType = Type::Directional;
-    XMFLOAT3 Position = { 0.0f, 5.0f, 0.0f };
-    XMFLOAT3 Direction = { 0.0f, -1.0f, 0.0f };
-    XMFLOAT4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glm::vec3 Position = glm::vec3(0.0f, 5.0f, 0.0f);
+    glm::vec3 Direction = glm::vec3(0.0f, -1.0f, 0.0f);
+    glm::vec4 Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     float Intensity = 1.0f;
     float Range = 10.0f;
 };
